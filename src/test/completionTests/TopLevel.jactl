@@ -1,0 +1,5 @@
+class TopLevel {
+  class Inner {}
+  const CONST_VALUE = 1
+  static def staticFunc() {}
+}

@@ -1,0 +1,182 @@
+{
+  parserClass="intellijplugin.JactlParserBnf"
+
+  extends="com.intellij.extapi.psi.ASTWrapperPsiElement"
+
+  psiClassPrefix="JactlBnf"
+  psiImplClassSuffix="Impl"
+  psiPackage="io.jactl.intellijplugin.psi"
+  psiImplPackage="io.jactl.intellijplugin.psi.impl"
+
+  elementTypeHolderClass="archive.intellijplugin.psi_saved.JactlBnfTypes"
+  elementTypeClass="io.jactl.intellijplugin.psi.JactlExprElementType"
+  tokenTypeClass="io.jactl.intellijplugin.psi.JactlTokenType"
+
+  generate=[ tokens="no" ]
+  parserImports=[
+    "static io.jactl.intellijplugin.psi.JactlTokenTypes.*"
+  ]
+
+  extends("expr_sub.*")=expr
+}
+parseScript ::= packageDecl? importStmt* script
+// parseClass ::= packageDecl? importStmt* classDecl EOF
+script ::= stmts
+packageDecl ::= PACKAGE IDENTIFIER ( DOT IDENTIFIER ) *
+importStmt ::= IMPORT classPath (AS IDENTIFIER)?
+             | IMPORT STATIC classPath DOT ( IDENTIFIER | STAR )
+
+block ::= LEFT_BRACE stmts RIGHT_BRACE
+        | stmts EOF      // Special case for top most script block
+private separator ::= (EOL|SEMICOLON)
+private separators ::= separator+
+stmts ::= declaration (separators declaration)* separator*
+declaration ::= multiVarDecl
+              | funDecl
+              | varDecl
+              | classDecl
+              | statement
+statement ::= (ifStmt
+            | (IDENTIFIER COLON) ? forStmt
+            | (IDENTIFIER COLON) ? whileStmt
+            | beginEndBlock
+            | LEFT_BRACE stmts RIGHT_BRACE
+            | exprStmt)
+type ::= DEF | VAR
+         | ( (BOOLEAN | BYTE | INT | LONG | DOUBLE | DECIMAL | STRING | MAP | LIST | OBJECT) (LEFT_SQUARE RIGHT_SQUARE) * )
+         | ( className ( LEFT_SQUARE RIGHT_SQUARE ) * )
+funDecl ::= STATIC? type IDENTIFIER LEFT_PAREN parameters? RIGHT_PAREN block
+parameters ::= ( varDecl ( COMMA varDecl ) * ) ?
+varDecl ::= type singleVarDecl ( COMMA singleVarDecl ) *
+singleVarDecl ::= IDENTIFIER ( EQUAL expr ) ?
+multiVarDecl ::= DEF LEFT_PAREN type? IDENTIFIER (COMMA type? IDENTIFIER ) * RIGHT_PAREN EQUAL LEFT_SQUARE expression (COMMA expression)* RIGHT_SQUARE
+ifStmt ::= IF LEFT_PAREN condition RIGHT_PAREN statement ( ELSE statement ) ?
+whileStmt ::= WHILE LEFT_PAREN condition RIGHT_PAREN statement
+forStmt ::= FOR LEFT_PAREN declaration SEMICOLON condition SEMICOLON
+                        commaSeparatedStatements RIGHT_PAREN statement
+private commaSeparatedStatements ::= ( statement ( COMMA statement ) * ) ?
+beginEndBlock ::= (BEGIN | END) block
+exprStmt ::= expression
+classDecl ::= CLASS IDENTIFIER (EXTENDS className)? LEFT_BRACE
+               ( singleVarDecl | STATIC? funDecl | classDecl ) *
+              RIGHT_BRACE
+doBlock ::= DO block
+literal ::= plusMinusNumber | BYTE_CONST | INTEGER_CONST | LONG_CONST | DOUBLE_CONST
+          | DECIMAL_CONST | STRING_CONST | TRUE | FALSE | NULL
+plusMinusNumber ::= (PLUS | MINUS) (BYTE_CONST | INTEGER_CONST | LONG_CONST | DOUBLE_CONST | DECIMAL_CONST)
+classPathOrIdentifier ::= IDENTIFIER | classPath
+classPath ::= IDENTIFIER DOT IDENTIFIER (DOT IDENTIFIER) *
+className ::= classPathOrIdentifier ( DOT IDENTIFIER ) *
+private mapOrListLiteral ::= mapLiteral | listLiteral
+listLiteral ::= LEFT_SQUARE ( expression ( COMMA expression ) * ) ? RIGHT_SQUARE
+mapLiteral ::= LEFT_SQUARE COLON RIGHT_SQUARE
+             | LEFT_BRACE COLON RIGHT_BRACE
+             | LEFT_SQUARE mapEntries RIGHT_SQUARE
+             | LEFT_BRACE mapEntries RIGHT_BRACE
+mapEntries ::= mapKey COLON expression (COMMA mapKey COLON expression) *
+mapKey ::= STRING_CONST | IDENTIFIER | LEFT_PAREN expression RIGHT_PAREN | exprString | keyWord
+exprString ::= EXPR_STRING_START ( DOLLAR_IDENTIFIER | DOLLAR_BRACE blockExpr |
+                      STRING_CONST ) * EXPR_STRING_END
+             | (SLASH|SLASH_EQUAL) ( IDENTIFIER | DOLLAR_BRACE blockExpr | STRING_CONST ) * SLASH
+regexSubstitute ::= REGEX_SUBST_START ( DOLLAR_IDENTIFIER | DOLLAR_BRACE blockExpr RIGHT_BRACE |
+                          STRING_CONST ) *
+                      REGEX_REPLACE ( DOLLAR_IDENTIFIER | DOLLAR_BRACE blockExpr RIGHT_BRACE |
+                          STRING_CONST ) * EXPR_STRING_END
+closure ::= LEFT_BRACE (parameters ARROW ) ? block
+returnExpr ::= RETURN expression
+printExpr ::= (PRINT | PRINTLN) expr ?
+dieExpr ::= DIE expr ?
+evalExpr ::= EVAL LEFT_PAREN expr ( COMMA expr )? RIGHT_PAREN
+switchExpr ::= SWITCH ( LEFT_PAREN expr RIGHT_PAREN ) ? LEFT_BRACE (switchPatterns|DEFAULT) ARROW expression (SEMICOLON? (switchPatterns|DEFAULT) ARROW expression)* RIGHT_BRACE
+blockExpr ::= block
+switchPatterns ::= switchPatternAndExpr ( COMMA switchPatternAndExpr ) *
+switchPatternAndExpr ::= switchPattern ( IF expression ) ?
+switchPattern ::= literal
+                | type
+                | className ( LEFT_PAREN mapOrListPattern RIGHT_PAREN ) ?
+                | exprString
+                | UNDERSCORE
+                | IDENTIFIER
+                | listPattern
+                | mapPattern
+                | DOLLAR_IDENTIFIER
+                | DOLLAR_BRACE blockExpr RIGHT_BRACE
+private mapOrListPattern ::= mapPattern | listPattern
+listPattern ::= LEFT_SQUARE ( switchPattern ( COMMA switchPattern ) * ) ? RIGHT_SQUARE
+mapPattern ::= LEFT_SQUARE COLON RIGHT_SQUARE
+             | LEFT_SQUARE ( patternMapKey COLON switchPattern ) ( COMMA patternMapKey COLON switchPattern ) * RIGHT_SQUARE
+patternMapKey ::= STRING_CONST | exprString | IDENTIFIER | STAR
+private keyWord ::= UNDERSCORE | DEF | VAR | BOOLEAN | BYTE | INT | LONG | DOUBLE | DECIMAL | STRING | OBJECT | VOID
+          | MAP | LIST | FOR | IF | UNLESS | WHILE | ELSE | CONTINUE | BREAK | CLASS | INTERFACE | EXTENDS
+          | IMPLEMENTS | PACKAGE | STATIC | IMPORT | AS | TRUE | FALSE | NULL | IN | INSTANCE_OF | RETURN
+          | NEW | AND | OR | NOT | DO | PRINT | PRINTLN | BEGIN | END | DIE | EVAL | FINAL | CONST | SEALED
+          | SWITCH | DEFAULT
+private condition ::= expression
+expression ::= orExpression
+private orExpression ::= andExpression ( OR andExpression) *
+private andExpression ::= notExpression ( AND notExpression ) *
+private notExpression ::= NOT * (returnExpr | printExpr | dieExpr | BREAK | CONTINUE | expr)
+newInstance ::= NEW classPathOrIdentifier LEFT_PAREN arguments RIGHT_PAREN
+                | NEW type (LEFT_SQUARE expression RIGHT_SQUARE ) ( LEFT_SQUARE expression RIGHT_SQUARE ) *
+                        ( LEFT_SQUARE RIGHT_SQUARE ) *
+private expressionList ::= expression ( COMMA expression ) *
+private arguments ::= mapEntries | argList
+private argList ::= expressionList ? ( LEFT_BRACE closure RIGHT_BRACE ) *
+private primary ::= ((PLUS | MINUS)? (INTEGER_CONST | DECIMAL_CONST | DOUBLE_CONST))
+          | STRING_CONST
+          | TRUE | FALSE | NULL
+          | exprString
+          | regexSubstitute
+          | (IDENTIFIER | DOLLAR_IDENTIFIER | classPath)
+          | mapOrListLiteral
+          | nestedExpr
+          | doBlock
+          | closure
+          | switchExpr
+          | evalExpr
+          | newInstance
+private nestedExpr ::= LEFT_PAREN expr RIGHT_PAREN
+                     | LEFT_PAREN expr ( COMMA expression ) * RIGHT_PAREN  // for lhs of multi-assignments
+expr ::= expr_sub0
+       | expr_sub1
+       | expr_sub2
+       | expr_sub2a
+       | expr_sub3
+       | expr_sub4
+       | expr_sub5
+       | expr_sub6
+       | expr_sub7
+       | expr_sub8
+       | expr_sub9
+       | expr_sub10
+       | expr_sub11
+       | expr_sub12
+       | expr_sub13
+       | expr_sub14
+       | expr_sub15
+private assignmentOp ::= EQUAL | QUESTION_EQUAL | STAR_EQUAL | SLASH_EQUAL | PERCENT_EQUAL | PERCENT_PERCENT_EQUAL | PLUS_EQUAL | MINUS_EQUAL | DOUBLE_LESS_THAN_EQUAL | DOUBLE_GREATER_THAN_EQUAL | TRIPLE_GREATER_THAN_EQUAL | AMPERSAND_EQUAL | PIPE_EQUAL | ACCENT_EQUAL
+expr_sub0 ::= expr assignmentOp expr { rightAssociative = true }
+expr_sub1 ::= expr QUESTION expr COLON expr
+expr_sub2a ::= expr QUESTION_COLON expr
+expr_sub2 ::= expr PIPE_PIPE expr
+expr_sub3 ::= expr AMPERSAND_AMPERSAND expr
+expr_sub4 ::= expr PIPE expr
+expr_sub5 ::= expr ACCENT expr
+expr_sub6 ::= expr AMPERSAND expr
+primary ops7 ::= EQUAL_EQUAL | BANG_EQUAL | COMPARE | EQUAL_GRAVE | BANG_GRAVE | TRIPLE_EQUAL | BANG_EQUAL_EQUAL
+expr_sub7 ::= expr ops7 expr
+private ops8 ::= LESS_THAN | LESS_THAN_EQUAL | GREATER_THAN | GREATER_THAN_EQUAL | INSTANCE_OF | BANG_INSTANCE_OF | IN | BANG_IN | AS
+expr_sub8 ::= expr ops8 expr
+private ops9 ::= DOUBLE_LESS_THAN | DOUBLE_GREATER_THAN | TRIPLE_GREATER_THAN
+expr_sub9 ::= expr ops9 expr
+private ops10 ::= MINUS | PLUS
+expr_sub10 ::= expr ops10 expr
+private ops11 ::= STAR | SLASH | PERCENT | PERCENT_PERCENT
+expr_sub11 ::= expr ops11 expr
+private ops12 ::= QUESTION_QUESTION | GRAVE | BANG | MINUS_MINUS | PLUS_PLUS | MINUS | PLUS
+expr_sub12 ::= ops12 expr
+private ops13 ::= DOT | QUESTION_DOT | LEFT_SQUARE | QUESTION_SQUARE | LEFT_PAREN | LEFT_BRACE
+expr_sub13 ::=  expr ops13  expr
+private postfixOps ::= MINUS_MINUS|PLUS_PLUS
+expr_sub14 ::= expr postfixOps
+expr_sub15 ::= primary

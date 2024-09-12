@@ -1,0 +1,3 @@
+package org.test2.sub
+
+class Another {}

@@ -1,0 +1,7 @@
+package org.test
+
+class XYZ extends AClass {
+  class ABC { static abcFunc() {} }
+  static def func() {}
+  def nonStaticFunc() {}
+}

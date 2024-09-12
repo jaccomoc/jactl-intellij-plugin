@@ -1,0 +1,53 @@
+<!-- Plugin Configuration File. Read more: https://plugins.jetbrains.com/docs/intellij/plugin-configuration-file.html -->
+<idea-plugin>
+  <!-- Unique identifier of the plugin. It should be FQN. It cannot be changed between the plugin versions. -->
+  <id>io.jactl.intellij-jactl</id>
+
+  <!-- Public plugin name should be written in Title Case.
+       Guidelines: https://plugins.jetbrains.com/docs/marketplace/plugin-overview-page.html#plugin-name -->
+  <name>Jactl</name>
+
+  <!-- A displayed Vendor name or Organization ID displayed on the Plugins Page. -->
+  <vendor email="jactllang@gmail.com" url="https://jactl.io">Jactl</vendor>
+
+  <!-- Description of the plugin displayed on the Plugin Page and IDE Plugin Manager.
+       Simple HTML elements (text formatting, paragraphs, and lists) can be added inside of <![CDATA[ ]]> tag.
+       Guidelines: https://plugins.jetbrains.com/docs/marketplace/plugin-overview-page.html#plugin-description -->
+  <description><![CDATA[
+    Intellij plugin for the Jactl language.<br>
+    <em>A non-blocking, secure scripting language for the JVM platform with syntax based on the best bits of Groovy and Perl.</em>
+  ]]></description>
+
+  <!-- Product and plugin compatibility requirements.
+       Read more: https://plugins.jetbrains.com/docs/intellij/plugin-compatibility.html -->
+  <depends>com.intellij.modules.platform</depends>
+  <depends>com.intellij.modules.java</depends>
+
+  <!-- Extension points defined by the plugin.
+       Read more: https://plugins.jetbrains.com/docs/intellij/plugin-extension-points.html -->
+  <extensions defaultExtensionNs="com.intellij">
+    <fileType name="Jactl File" implementationClass="io.jactl.intellijplugin.JactlFileType" fieldName="INSTANCE" language="Jactl" extensions="jactl"/>
+    <colorSettingsPage          implementation="io.jactl.intellijplugin.extensions.JactlColorSettingsPage"/>
+    <lang.parserDefinition         language="Jactl" implementationClass="io.jactl.intellijplugin.JactlParserDefinition"/>
+    <lang.syntaxHighlighterFactory language="Jactl" implementationClass="io.jactl.intellijplugin.extensions.JactlSyntaxHighLighterFactory"/>
+    <annotator                     language="Jactl" implementationClass="io.jactl.intellijplugin.extensions.JactlHighlightAnnotator" />
+    <completion.contributor        language="Jactl" implementationClass="io.jactl.intellijplugin.extensions.JactlCompletionContributor" />
+    <lang.documentationProvider    language="Jactl" implementationClass="io.jactl.intellijplugin.extensions.JactlDocumentationProvider"/>
+    <lang.findUsagesProvider       language="Jactl" implementationClass="io.jactl.intellijplugin.extensions.JactlFindUsagesProvider" />
+    <moveFileHandler                                implementation="io.jactl.intellijplugin.extensions.JactlMoveFileHandler" />
+    <lang.refactoringSupport       language="Jactl" implementationClass="io.jactl.intellijplugin.extensions.JactlRefactoringSupportProvider"/>
+    <lang.formatter                language="Jactl" implementationClass="io.jactl.intellijplugin.extensions.JactlFormatingModelBuilder" />
+    <lang.braceMatcher             language="Jactl" implementationClass="io.jactl.intellijplugin.extensions.JactlPairedBraceMatcher" />
+    <lang.commenter                language="Jactl" implementationClass="io.jactl.intellijplugin.extensions.JactlCommenter" />
+
+    <!-- runner/debugger -->
+    <compileServer.plugin              classpath="jps-plugin.jar;jactl-2.0.1-SNAPSHOT.jar"/>
+    <compiler.buildTargetScopeProvider implementation="io.jactl.intellijplugin.extensions.compiler.JactlTargetScopeProvider" />
+    <runConfigurationProducer          implementation="io.jactl.intellijplugin.extensions.runner.JactlRunConfigurationProducer" />
+    <programRunner                     implementation="io.jactl.intellijplugin.extensions.runner.JactlProgramRunner"/>
+    <configurationType                 implementation="io.jactl.intellijplugin.extensions.runner.JactlRunConfigurationType" />
+    <debugger.javaDebugAware           implementation="io.jactl.intellijplugin.extensions.debugger.JactlDebugAware" />
+    <debugger.positionManagerFactory   implementation="io.jactl.intellijplugin.extensions.debugger.JactlPositionManagerFactory" />
+    <debuggerClassFilterProvider       implementation="io.jactl.intellijplugin.extensions.debugger.JactlDebuggerClassFilterProvider" />
+  </extensions>
+</idea-plugin>

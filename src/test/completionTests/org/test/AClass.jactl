@@ -1,0 +1,12 @@
+package org.test
+
+class AClass {
+  class B {
+    class XXX { static def xxxfunc() {1} }
+    const BBB = 1
+  }
+  class C extends B {}
+  int xxx
+  static def func(int i) { 'func'+i }
+  const VALUE = 2
+}
