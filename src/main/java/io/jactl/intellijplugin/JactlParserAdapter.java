@@ -72,8 +72,8 @@ public class JactlParserAdapter implements PsiParser {
 
       final JactlFile file = jactlFile;
 
-      List<JactlTokenBuilder.Event> events = tokeniser.getEvents().stream().filter(Predicate.not(JactlTokenBuilder.Event::isDropped)).toList();
-      //List<JactlTokenBuilder.Event> events = tokeniser.getEvents();
+      //List<JactlTokenBuilder.Event> events = tokeniser.getEvents().stream().filter(Predicate.not(JactlTokenBuilder.Event::isDropped)).toList();
+      List<JactlTokenBuilder.Event> events = tokeniser.getEvents();
       for (int i = 0; i < events.size(); i++) {
         var event = events.get(i);
         if (event.isDropped()) {

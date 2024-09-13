@@ -19,6 +19,7 @@ package io.jactl.intellijplugin;
 
 import com.intellij.lang.ASTNode;
 import com.intellij.openapi.project.Project;
+import com.intellij.openapi.roots.ProjectRootManager;
 import com.intellij.openapi.vfs.VfsUtil;
 import com.intellij.openapi.vfs.VfsUtilCore;
 import com.intellij.openapi.vfs.VirtualFile;
@@ -37,6 +38,7 @@ import io.jactl.intellijplugin.psi.impl.JactlPsiTypeImpl;
 import io.jactl.intellijplugin.psi.interfaces.JactlPsiName;
 import io.jactl.runtime.ClassDescriptor;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.File;
 import java.nio.file.Path;
@@ -66,26 +68,14 @@ public class JactlUtils {
                                                                    TokenType.SWITCH.asString
                                                                    };
 
-  private static String[][] SOURCE_ROOTS;
-  private static String[]   SOURCE_ROOT_PATHS;
-
-  static {
-    setSourceRoots(System.getProperty("jactl.roots", "src/test/jactl:src/main/jactl"));
-  }
-
-  public static void setSourceRoots(String sourceRoots) {
-    SOURCE_ROOT_PATHS = sourceRoots.split(":");
-    SOURCE_ROOTS      = Arrays.stream(SOURCE_ROOT_PATHS)
-                              .map(path -> path.split("/"))
-                              .toArray(String[][]::new);
-  }
-
   public static List<String> getSourceRoots(Project project) {
-    return Arrays.stream(SOURCE_ROOTS)
-                 .map(a -> VfsUtil.findRelativeFile(project.getBaseDir(), a))
-                 .filter(Objects::nonNull)
+    return Arrays.stream(ProjectRootManager.getInstance(project).getContentSourceRoots())
                  .map(VirtualFile::getCanonicalPath)
                  .toList();
+  }
+
+  public static List<VirtualFile> getSourceRootFiles(Project project) {
+    return List.of(ProjectRootManager.getInstance(project).getContentSourceRoots());
   }
 
   public static <T> int indexOf(T[] elements, T element) {
@@ -113,38 +103,18 @@ public class JactlUtils {
   }
 
   public static Set<String> pkgNames(Project project) {
-    Set<String> pkgNames = new HashSet<>();
-    for (String[] root: SOURCE_ROOTS) {
-      VirtualFile baseFile = VfsUtil.findRelativeFile(project.getBaseDir(), root);
-      if (baseFile != null) {
-        pkgNames.addAll(pkgNames(baseFile));
-      }
-    }
-    return pkgNames;
-  }
-
-  public static boolean isValidPackageDir(PsiElement element) {
-    if (element instanceof PsiDirectory dir) {
-      for (String root : SOURCE_ROOT_PATHS) {
-        if (dir.getVirtualFile().getCanonicalPath().startsWith(root)) {
-          return true;
-        }
-      }
-    }
-    return false;
+    return getSourceRootFiles(project).stream()
+                                      .map(JactlUtils::pkgNames)
+                                      .flatMap(Collection::stream)
+                                      .collect(Collectors.toSet());
   }
 
   public static String pathToClass(Project project, String path) {
-    String basePath = project.getBaseDir().getCanonicalPath();
-    if (path.startsWith(basePath)) {
-      path = path.substring(basePath.length() + 1);
+    String projectPath = getProjectPath(project, path);
+    if (projectPath == null) {
+      projectPath = path;
     }
     path = JactlPlugin.removeSuffix(path);
-    for (String root: SOURCE_ROOT_PATHS) {
-      if (path.startsWith(root)) {
-        return path.substring(root.length() + 1).replace(File.separatorChar, '.');
-      }
-    }
     return path.replace(File.separatorChar, '.');
   }
 
@@ -437,17 +407,25 @@ public class JactlUtils {
    */
   public static Set<PackageEntry> packageContents(Project project, String packageName) {
     Set<PackageEntry> contents = new HashSet<>();
-    processPackage(project, packageName, child -> contents.add(new PackageEntry(child.isDirectory(), JactlPlugin.removeSuffix(child.getName()))));
+    processPackage(project, packageName, child -> {
+      // Add all subdirs and class files (not script files)
+      if (child.isDirectory() || child.getFileType() == JactlFileType.INSTANCE) {
+        if (!child.isDirectory()) {
+          var jactlFile = getJactlFile(project, child);
+          if (jactlFile == null || jactlFile.isScriptFile()) {
+            return;
+          }
+        }
+        contents.add(new PackageEntry(child.isDirectory(), JactlPlugin.removeSuffix(child.getName())));
+      }
+    });
     return contents;
   }
 
   private static void processPackage(Project project, String packageName, Consumer<VirtualFile> processor) {
-    var baseDir = getBaseDir(project);
-    List<String> packagePath = packageName == null || packageName.isEmpty() ? List.of() : Arrays.asList(packageName.split("\\."));
-    for (String[] root: SOURCE_ROOTS) {
-      List<String> path = new ArrayList<>(Arrays.asList(root));
-      path.addAll(packagePath);
-      VirtualFile baseFile = VfsUtil.findRelativeFile(baseDir, path.toArray(String[]::new));
+    String[] packagePath = packageName == null || packageName.isEmpty() ? new String[0] : packageName.split("\\.");
+    for (var root: getSourceRootFiles(project)) {
+      VirtualFile baseFile = VfsUtil.findRelativeFile(root, packagePath);
       if (baseFile == null) {
         continue;
       }
@@ -458,10 +436,11 @@ public class JactlUtils {
   public static List<ClassDescriptor> packageClasses(Project project, String packageName) {
     List<ClassDescriptor> contents = new ArrayList<>();
     processPackage(project, packageName, child -> {
-      if (!child.isDirectory()) {
+      if (!child.isDirectory() && child.getFileType() == JactlFileType.INSTANCE) {
         String         className = JactlPlugin.removeSuffix(child.getName());
-        Stmt.ClassDecl classDecl = JactlParserAdapter.getClassDecl(project, packageName.isEmpty() ? className : packageName + "." + className);
-        if (classDecl != null) {
+        var            file      = getJactlFile(project, child);
+        Stmt.ClassDecl classDecl = JactlParserAdapter.getClassDecl(file, file.getText(), className);
+        if (classDecl != null && !classDecl.isScriptClass()) {
           contents.add(classDecl.classDescriptor);
         }
       }
@@ -469,9 +448,17 @@ public class JactlUtils {
     return contents;
   }
 
-  public static JactlFile findFileForClass(Project project, String classPathName) {
-    String pkgName   = JactlPlugin.stripFromLast(classPathName, '.');
-    String className = classPathName.substring(pkgName.isEmpty() ? 0 : pkgName.length() + 1);
+  private static @Nullable JactlFile getJactlFile(Project project, VirtualFile child) {
+    return (JactlFile) PsiManager.getInstance(project).findFile(child);
+  }
+
+  public static JactlFile findFileForClassPath(Project project, String classPathName) {
+    return findFileForClass(project, classPathName.replace(File.separatorChar, '.'));
+  }
+
+  public static JactlFile findFileForClass(Project project, String fqClassName) {
+    String pkgName   = JactlPlugin.stripFromLast(fqClassName, '.');
+    String className = fqClassName.substring(pkgName.isEmpty() ? 0 : pkgName.length() + 1);
 
     // First strip prefix if we have script class
     if (className.startsWith(JactlPlugin.SCRIPT_PREFIX)) {
@@ -483,7 +470,7 @@ public class JactlUtils {
     String filePath = pkgName.replace('.', File.separatorChar) + File.separatorChar + className + JactlPlugin.DOT_SUFFIX;
     var file = findVirtualFile(project, filePath);
     if (file != null) {
-      return (JactlFile)PsiManager.getInstance(project).findFile(file);
+      return getJactlFile(project, file);
     }
     return null;
   }
@@ -491,19 +478,14 @@ public class JactlUtils {
   public static JactlFile findFile(Project project, String filePath) {
     var file = findVirtualFile(project, filePath);
     if (file != null) {
-      return (JactlFile)PsiManager.getInstance(project).findFile(file);
+      return getJactlFile(project, file);
     }
     return null;
   }
 
   public static VirtualFile findVirtualFile(Project project, String fileName) {
-    VirtualFile baseDir = project.getBaseDir();
-    if (baseDir == null) {
-      return null;
-    }
-    String projectDir = baseDir.getCanonicalPath();
-    for (String root: SOURCE_ROOT_PATHS) {
-      var file = VfsUtil.findFile(Path.of(projectDir, root, fileName), true);
+    for (var root: getSourceRootFiles(project)) {
+      var file = VfsUtil.findRelativeFile(root, fileName.split(File.separator));
       if (file != null) {
         return file;
       }
@@ -544,28 +526,38 @@ public class JactlUtils {
     return null;
   }
 
+  public static String getProjectPath(Project project, String path) {
+    for (var root: getSourceRoots(project)) {
+      if (path.startsWith(root)) {
+        return path.substring(root.length() + 1);
+      }
+    }
+    return null;
+  }
+
+  public static String getProjectPath(Project project, VirtualFile file) {
+    return getProjectPath(project, file, file.getCanonicalPath());
+  }
+
   public static String getProjectPath(PsiFileSystemItem item) {
     return getProjectPath(item, item.getVirtualFile().getCanonicalPath());
   }
 
-  public static String getProjectPath(PsiFileSystemItem item, String defaultValue) {
-    String canonicalPath = item.getVirtualFile().getCanonicalPath();
-    VirtualFile baseDir = item.getProject().getBaseDir();
-    if (baseDir == null) {
-      return defaultValue;
-    }
-    String projectDir = baseDir.getCanonicalPath();
-    for (String root: SOURCE_ROOT_PATHS) {
-      String dir = projectDir + File.separatorChar + root;
-      if (canonicalPath.startsWith(dir)) {
-        String subDir = canonicalPath.substring(dir.length());
-        if (subDir.startsWith(File.separator)) {
-          subDir = subDir.substring(File.separator.length());
-        }
-        return subDir;
+  public static String getProjectPath(Project project, VirtualFile file, String defaultValue) {
+    VirtualFile moduleSourceRoot = ProjectRootManager.getInstance(project)
+                                                     .getFileIndex()
+                                                     .getSourceRootForFile(file);
+    if (moduleSourceRoot != null) {
+      if (file.getPath().startsWith(moduleSourceRoot.getPath())) {
+        String projectPath = file.getPath().substring(moduleSourceRoot.getPath().length() + 1);
+        return projectPath;
       }
     }
     return defaultValue;
+  }
+
+  public static String getProjectPath(PsiFileSystemItem item, String defaultValue) {
+    return getProjectPath(item.getProject(), item.getVirtualFile(), defaultValue);
   }
 
   public static JactlPsiElement createNewPackagePath(PsiDirectory dir, JactlPsiElement psiElement) {
@@ -611,17 +603,6 @@ public class JactlUtils {
     return psiElement;
   }
 
-  static VirtualFile getBaseDir(Project project) {
-    if (project.getBaseDir() != null) {
-      return project.getBaseDir();
-    }
-    if (project.getBasePath() == null) {
-      throw new IncorrectOperationException("Could not find base directory of project " + project);
-    }
-    Path file = Path.of(project.getBasePath());
-    return VfsUtil.findFile(file, true);
-  }
-
   public static <T> Stream<T> stream(T initial, Function<T,T> generator) {
     List<T> result = new ArrayList<>();
     for (T obj = generator.apply(initial); obj != null; obj = generator.apply(obj)) {
@@ -651,7 +632,7 @@ public class JactlUtils {
     if (idx == -1) {
       return "";
     }
-    return projectPath.substring(0, idx).replace(File.separatorChar, '/');
+    return projectPath.substring(0, idx).replace(File.separatorChar, '.');
   }
 
 }

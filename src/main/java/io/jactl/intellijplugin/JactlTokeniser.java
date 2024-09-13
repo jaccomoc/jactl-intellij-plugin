@@ -26,19 +26,19 @@ public class JactlTokeniser extends Lexer {
 
   IElementType EOF = JactlTokenTypes.EOF;  // Force initialisation of token types
 
-  CharSequence    bufferSequence;
-  Tokeniser       tokeniser;
-  IElementType    current;
-  int             startOffset;
-  int               endOffset;
-  JactlTokenBuilder jactlBuilder;
-  Stmt.ClassDecl    script;
-  JactlContext    jactlContext;
+  CharSequence        bufferSequence;
+  Tokeniser           tokeniser;
+  IElementType        current;
+  int                 startOffset;
+  int                 endOffset;
+  JactlTokenBuilder   jactlBuilder;
+  Stmt.ClassDecl      script;
+  JactlContext        jactlContext;
   ListIterator<Token> tokenIter = null;
-  Token           nextToken = null;
-  int             tokenStart;
-  int             tokenEnd;
-  Project         project;
+  Token               nextToken = null;
+  int                 tokenStart;
+  int                 tokenEnd;
+  Project             project;
 
   public JactlTokeniser(Project project) {
     this.project = project;
@@ -175,7 +175,7 @@ public class JactlTokeniser extends Lexer {
       LOG.warn("Class lookup name does not start with expected java package name (name=" + name + ")");
     }
 
-    var file = JactlUtils.findFileForClass(project, name);
+    var file = JactlUtils.findFileForClassPath(project, name);
     if (file == null) {
       return null;
     }

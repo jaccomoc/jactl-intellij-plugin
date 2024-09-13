@@ -39,16 +39,7 @@ public class JactlFile extends PsiFileBase implements JactlPsiElement {
    * @return the package name
    */
   public String getPackageName() {
-    String name = getVirtualFile().getCanonicalPath();
-    return JactlUtils.getSourceRoots(getProject())
-                     .stream()
-                     .filter(path -> name.startsWith(path))
-                     .map(path -> name.substring(path.length() + 1))
-                     .map(JactlPlugin::removeSuffix)                        // Remove .jactl
-                     .map(pname -> pname.replace(File.separatorChar, '.'))
-                     .map(JactlPlugin::removeSuffix)                        // Remove class name
-                     .findFirst()
-                     .orElse(null);
+    return JactlUtils.packageNameFor(this);
   }
 
   @Override
@@ -106,8 +97,11 @@ public class JactlFile extends PsiFileBase implements JactlPsiElement {
     return (JactlPsiElement)JactlUtils.getFirstDescendant(this, JactlStmtElementType.CLASS_DECL);
   }
 
-  public boolean isClassFile() {
-    return getTopLevelClass() != null;
+  public boolean isScriptFile() {
+    var classDecl = getTopLevelClass();
+    // Script if no top level class or top level class does not match file name
+    // (such as when editing a script and first stmt is a class declaration and
+    // editing not yet complete).
+    return classDecl == null || !classDecl.name.getStringValue().equals(JactlPlugin.removeSuffix(this.getName()));
   }
-
 }

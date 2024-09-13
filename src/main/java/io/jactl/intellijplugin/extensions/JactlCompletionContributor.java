@@ -81,11 +81,11 @@ public class JactlCompletionContributor extends CompletionContributor {
            new CompletionProvider<CompletionParameters>() {
              @Override
              protected void addCompletions(@NotNull CompletionParameters parameters, @NotNull ProcessingContext context, @NotNull CompletionResultSet result) {
-               JactlPsiElement element     = (JactlPsiElement)parameters.getPosition();
-               JactlPsiElement parent      = (JactlPsiElement)element.getParent();
-               JactlPsiElement grandParent = (JactlPsiElement)parent.getParent();
-               var classDescriptors = JactlParserAdapter.getClasses(parent.getFile(), parent.getSourceCode(), grandParent.getAstKey());
-               var owningClass = JactlParserAdapter.getClass(parent.getFile(), parent.getSourceCode(), parent.getAstKey());
+               JactlPsiElement element          = (JactlPsiElement) parameters.getPosition();
+               JactlPsiElement parent           = (JactlPsiElement) element.getParent();
+               JactlPsiElement grandParent      = (JactlPsiElement) parent.getParent();
+               var             classDescriptors = JactlParserAdapter.getClasses(parent.getFile(), parent.getSourceCode(), grandParent.getAstKey());
+               var             owningClass      = JactlParserAdapter.getClass(parent.getFile(), parent.getSourceCode(), parent.getAstKey());
                List<ClassDescriptor> baseClasses = owningClass == null ? List.of()
                                                                        : Stream.concat(Stream.of(owningClass), JactlUtils.stream(owningClass, ClassDescriptor::getBaseClass)).toList();
                Runnable addTypes = () -> {
@@ -100,7 +100,7 @@ public class JactlCompletionContributor extends CompletionContributor {
                    firstChild == parent &&
                    JactlUtils.getNextSibling(parent, JactlTokenTypes.IDENTIFIER) == null) {
                  addTypes.run();
-                 var classDecl = JactlUtils.getAncestor(grandParent, JactlStmtElementType.CLASS_DECL);
+                 var        classDecl        = JactlUtils.getAncestor(grandParent, JactlStmtElementType.CLASS_DECL);
                  PsiElement greatGrandParent = grandParent.getParent();
                  if (classDecl != null && greatGrandParent.getParent() == classDecl) {
                    // We are at field/method level of a class declaration so add "static" and "const" and
