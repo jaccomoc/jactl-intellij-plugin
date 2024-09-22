@@ -8,9 +8,6 @@ import io.jactl.intellijplugin.JactlFile;
 import io.jactl.intellijplugin.JactlParserAdapter;
 
 public interface JactlPsiElement extends PsiElement  {
-
-  Logger LOG = Logger.getInstance(JactlPsiElement.class);
-
   JactlFile   getFile();
   JactlAstKey getAstKey();
 

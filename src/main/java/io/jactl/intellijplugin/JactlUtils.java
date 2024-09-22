@@ -18,6 +18,7 @@
 package io.jactl.intellijplugin;
 
 import com.intellij.lang.ASTNode;
+import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.roots.ProjectRootManager;
 import com.intellij.openapi.vfs.VfsUtil;
@@ -52,6 +53,7 @@ import java.util.stream.Stream;
 import static com.intellij.psi.TokenType.WHITE_SPACE;
 
 public class JactlUtils {
+  private static final Logger LOG = Logger.getInstance(JactlUtils.class);
 
   public static final String[] BUILTIN_TYPES = Parser.typesAndVar.stream().map(tok -> tok.asString).toArray(String[]::new);
   public static final String[] SIMPLE_TYPES  = Arrays.stream(Parser.simpleTypes).map(tok -> tok.asString).toArray(String[]::new);
@@ -114,8 +116,8 @@ public class JactlUtils {
     if (projectPath == null) {
       projectPath = path;
     }
-    path = JactlPlugin.removeSuffix(path);
-    return path.replace(File.separatorChar, '.');
+    projectPath = JactlPlugin.removeSuffix(projectPath);
+    return projectPath.replace(File.separatorChar, '.');
   }
 
   @NotNull
@@ -151,7 +153,7 @@ public class JactlUtils {
          return (JactlPsiElement)psi;
        }
     }
-    JactlPsiElement.LOG.warn("Could not find node corresponding to " + key);
+    LOG.warn("Could not find node corresponding to " + key);
     return null;
   }
 

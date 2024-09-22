@@ -1,6 +1,7 @@
 package io.jactl.intellijplugin.psi.impl;
 
 import com.intellij.lang.ASTNode;
+import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.util.NlsSafe;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.search.GlobalSearchScope;
@@ -18,6 +19,8 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public class JactlPsiNameImpl extends AbstractJactlPsiStmt implements JactlPsiName {
+
+  public static final Logger LOG = Logger.getInstance(JactlPsiNameImpl.class);
 
   JactlNameElementType type;
 
@@ -71,14 +74,16 @@ public class JactlPsiNameImpl extends AbstractJactlPsiStmt implements JactlPsiNa
 
   @Override
   public @NotNull SearchScope getUseScope() {
-    if (type == JactlNameElementType.CLASS) {
-      var jactlAstNode = ((JactlPsiElement) getParent()).getJactlAstNode();
-      var block = jactlAstNode.getBlock();
-      // If are a class nested within a top level class then we are potentially visible to global scope
-      for (ClassDescriptor descriptor = block.owningClass.classDescriptor; descriptor != null; descriptor = descriptor.getEnclosingClass()) {
-        if (descriptor.isTopLevelClass()) {
-          return GlobalSearchScope.projectScope(getProject());
-        }
+    var jactlAstNode = ((JactlPsiElement) getParent()).getJactlAstNode();
+    var block = jactlAstNode.getBlock();
+    if (block == null) {
+      LOG.warn("Block is null for " + jactlAstNode);
+      return GlobalSearchScope.allScope(getProject());
+    }
+    // If owning class is top level or is nested inside a top level class then we have global visibility
+    for (ClassDescriptor descriptor = block.owningClass.classDescriptor; descriptor != null; descriptor = descriptor.getEnclosingClass()) {
+      if (descriptor.isTopLevelClass()) {
+        return GlobalSearchScope.projectScope(getProject());
       }
     }
     return new LocalSearchScope(getFile());

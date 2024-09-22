@@ -35,8 +35,6 @@ public class CompletionTests extends BasePlatformTestCase {
 
   private static final String NONE = "$$NONE$$";
 
-  private static int fileCounter = 1;
-
   @Override
   protected String getTestDataPath() {
     return "src/test";
@@ -44,7 +42,6 @@ public class CompletionTests extends BasePlatformTestCase {
 
   protected void setUp() throws Exception {
     super.setUp();
-    fileCounter = 1;
     System.out.println(getTestName(true));
     String testData = "";
     myFixture.copyDirectoryToProject("completionTests", testData);
