@@ -88,11 +88,8 @@ public class JactlPsiReference extends PsiReferenceBase<PsiElement> implements P
       if (descriptor == null) {
         return null;
       }
-      var classDecl = descriptor.getUserData(Stmt.ClassDecl.class);
-      if (classDecl == null) {
-        LOG.warn("ClassDescriptor for parent (" + descriptor.getPrettyName() + ") has no ClassDecl");
-        return null;
-      }
+      var classDecl = getClassDecl(descriptor);
+      if (classDecl == null) return null;
       String fieldName = psiElement.getText();
       JactlUserDataHolder decl = classDecl.fieldVars.get(fieldName);
       if (decl == null) {
@@ -122,7 +119,7 @@ public class JactlPsiReference extends PsiReferenceBase<PsiElement> implements P
       if (expr.type != null) {
         ClassDescriptor descriptor = expr.type.getClassDescriptor();
         if (descriptor != null) {
-          classDecl = descriptor.getUserData(Stmt.ClassDecl.class);
+          classDecl = getClassDecl(descriptor);
         }
       }
       if (classDecl == null) {
@@ -139,21 +136,14 @@ public class JactlPsiReference extends PsiReferenceBase<PsiElement> implements P
         return null;
       }
       var descriptor = jactlType.getClassDescriptor();
-      if (descriptor == null) {
-        return null;
-      }
-      Stmt.ClassDecl classDecl = descriptor.getUserData(Stmt.ClassDecl.class);
-      //Stmt.ClassDecl classDecl = JactlParserAdapter.getClassDecl(psiElement.getFile(), source, descriptor.getNamePath());
-      if (classDecl == null) {
-        LOG.warn("ClassDescriptor has no ClassDecl");
-        return null;
-      }
+      if (descriptor == null) return null;
+      Stmt.ClassDecl classDecl = getClassDecl(descriptor);
+      if (classDecl == null) return null;
       JactlAstKey declarationKey = classDecl.getUserData(JactlAstKey.class);
       if (declarationKey == null) {
         LOG.warn("Declaration has no AST Key set: declaration=" + classDecl);
         return null;
       }
-
       return JactlUtils.getNameElementForPsiElementInTree(declarationKey);
     }
 
@@ -190,6 +180,22 @@ public class JactlPsiReference extends PsiReferenceBase<PsiElement> implements P
 
     // Now we need to find the PSI element in our PSI tree
     return JactlUtils.getNameElementForPsiElementInTree(declarationKey);
+  }
+
+  private static Stmt.@Nullable ClassDecl getClassDecl(ClassDescriptor descriptor) {
+    var classDecl = descriptor.getUserData(Stmt.ClassDecl.class);
+    if (classDecl == null) {
+      LOG.warn("ClassDescriptor for parent (" + descriptor.getPrettyName() + ") has no ClassDecl");
+      return null;
+    }
+    // Get the ClassDecl again in case file needs reparsing due to changes
+    JactlAstKey classDeclKey = classDecl.getUserData(JactlAstKey.class);
+    classDecl = JactlParserAdapter.getClassDecl(classDeclKey.getFile(), classDeclKey.getFile().getText(), descriptor.getNamePath());
+    if (classDecl == null) {
+      LOG.warn("ClassDescriptor for parent (" + descriptor.getPrettyName() + ") still has no ClassDecl");
+      return null;
+    }
+    return classDecl;
   }
 
   @Override

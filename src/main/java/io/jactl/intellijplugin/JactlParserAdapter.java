@@ -203,6 +203,13 @@ public class JactlParserAdapter implements PsiParser {
     return parsedScript.getVariablesAndFunctions(astKey);
   }
 
+  /**
+   * Get the Stmt.ClassDecl for given class in given file
+   * @param file        the JactlFile
+   * @param sourceCode  the source code
+   * @param className   the class name (A$B$C) without package name
+   * @return
+   */
   public static Stmt.ClassDecl getClassDecl(JactlFile file, String sourceCode, String className) {
     return getParsedScript(file, sourceCode).getClassDecl(className);
   }
@@ -281,6 +288,11 @@ public class JactlParserAdapter implements PsiParser {
       return result;
     }
 
+    /**
+     * Return the Stmt.ClassDecl for given class name within the file
+     * @param name  the class name (A$B$C)
+     * @return the Stmt.ClassDecl or null
+     */
     public Stmt.ClassDecl getClassDecl(String name) {
       return resolver.getClassDecl(name);
     }

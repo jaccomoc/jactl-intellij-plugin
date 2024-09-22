@@ -173,6 +173,22 @@ public class FindUsageTests extends BasePlatformTestCase {
     assertEquals(2, usageCount());
   }
 
+  public void testStaticMethodInnerClass() {
+    myFixture.addFileToProject("a/b/CCC.jactl", "package a.b; class CCC{ class EEE { static def f<caret>ff(){} } }");
+    myFixture.addFileToProject("script.jactl", "import a.b.CCC; CCC.EEE.fff()");
+    myFixture.addFileToProject("script2.jactl", "import a.b.CCC; CCC.EEE eee = new CCC.EEE(); eee.fff()");
+    myFixture.configureByFiles("a/b/CCC.jactl");
+    assertEquals(2, usageCount());
+  }
+
+  public void testStaticMethodInnerClass2() {
+    myFixture.addFileToProject("a/b/CCC.jactl", "package a.b; class CCC{ class DDD { class EEE { static def f<caret>ff(){} } } }");
+    myFixture.addFileToProject("script.jactl", "import a.b.CCC; CCC.DDD.EEE.fff()");
+    myFixture.addFileToProject("script2.jactl", "import a.b.CCC; CCC.DDD.EEE eee = new CCC.DDD.EEE(); eee.fff()");
+    myFixture.configureByFiles("a/b/CCC.jactl");
+    assertEquals(2, usageCount());
+  }
+
   public void testField() {
     myFixture.addFileToProject("a/b/CCC.jactl", "package a.b; class CCC{ def f<caret>ff; def f(){fff} }");
     myFixture.configureByFiles("a/b/CCC.jactl");

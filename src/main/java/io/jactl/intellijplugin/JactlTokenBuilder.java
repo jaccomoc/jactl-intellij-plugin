@@ -118,18 +118,18 @@ public class JactlTokenBuilder extends BuilderImpl {
   }
 
   public class JactlMarker implements Marker {
-    Marker              tokenMarker;
     public PsiBuilder.Marker psiMarker;
+    Marker              tokenMarker;
     boolean             doneFlagged = false;
     public IElementType type;
     int                 id;
     boolean             dropped = false;
     boolean             isDone  = false;
-    public JactlUserDataHolder astNode;     // Either Stmt, Expr, JactlType, or JactlName
-    public int         offset;      // Offset into source code
-    public JactlAstKey nameKey;     // For FunDecl and VarDecls points to identifier
+    public int          offset;      // Offset into source code
+    public JactlAstKey  nameKey;     // For FunDecl and VarDecls points to identifier
     boolean             isError;
     CompileError        error;
+    public JactlUserDataHolder astNode;     // Either Stmt, Expr, JactlType, or JactlName
 
     JactlMarker(Marker tokenMarker, int id) {
       this.tokenMarker = tokenMarker;

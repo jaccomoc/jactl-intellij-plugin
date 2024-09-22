@@ -1,6 +1,5 @@
 package io.jactl.intellijplugin.psi;
 
-import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.psi.PsiElement;
 import io.jactl.JactlUserDataHolder;
 import io.jactl.intellijplugin.JactlAstKey;
@@ -12,14 +11,7 @@ public interface JactlPsiElement extends PsiElement  {
   JactlAstKey getAstKey();
 
   default JactlFile _getFile() {
-    return (JactlFile)getContainingFile();
-//    PsiElement parent = null;
-//    for (parent = getParent(); parent != null && !(parent instanceof JactlFile); parent = parent.getParent()) {
-//    }
-//    if (parent == null) {
-//      LOG.error("Could not find parent which is a JactlFile: psi=" + this + ", node=" + getNode());
-//    }
-//    return (JactlFile)parent;
+    return (JactlFile) getContainingFile();
   }
 
   default String getSourceCode() {

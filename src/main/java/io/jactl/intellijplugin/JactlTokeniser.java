@@ -167,6 +167,13 @@ public class JactlTokeniser extends Lexer {
                        .build();
   }
 
+  /**
+   * Get ClassDecriptor for given class name
+   * @param name             name of the class (jactl/pkg/x/y/z/A$B$C)
+   * @param baseJavaPkgFile  base java package in file format (jactl/pkg)
+   * @param project          the project
+   * @return the ClassDescriptor or null
+   */
   private ClassDescriptor lookup(String name, String baseJavaPkgFile, Project project) {
     if (name.startsWith(baseJavaPkgFile)) {
       name = name.substring(baseJavaPkgFile.length() + 1);
@@ -183,14 +190,14 @@ public class JactlTokeniser extends Lexer {
     // Strip package name
     int    idx       = name.lastIndexOf('/');
     String className = idx == -1 ? name : name.substring(idx + 1);
-    if (className.startsWith(JactlPlugin.SCRIPT_PREFIX)) {
-      className = className.substring(JactlPlugin.SCRIPT_PREFIX.length());
-      className.replace('$', '.');               // Turn A$B$C back into A.B.C
-      className = JactlPlugin.SCRIPT_PREFIX + className;
-    }
-    else {
-      className.replace('$', '.');               // Turn A$B$C back into A.B.C
-    }
+//    if (className.startsWith(JactlPlugin.SCRIPT_PREFIX)) {
+//      className = className.substring(JactlPlugin.SCRIPT_PREFIX.length());
+//      className.replace('$', '.');               // Turn A$B$C back into A.B.C
+//      className = JactlPlugin.SCRIPT_PREFIX + className;
+//    }
+//    else {
+//      className.replace('$', '.');               // Turn A$B$C back into A.B.C
+//    }
     Stmt.ClassDecl classDecl = JactlParserAdapter.getClassDecl(file, file.getText(), className);
     if (classDecl == null) {
       return null;
