@@ -61,8 +61,9 @@ public class JactlRunConfigurationProducer extends LazyRunConfigurationProducer<
       configuration.setName(virtualFile.getName());
       configuration.setScriptPath(virtualFile.getCanonicalPath());
       configuration.setModule(ModuleUtilCore.findModuleForPsiElement(jactlFile));
+      return true;
     }
-    return true;
+    return false; // Not a Jactl file
   }
 
   @Override

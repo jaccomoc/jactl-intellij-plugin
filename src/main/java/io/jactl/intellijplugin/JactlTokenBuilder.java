@@ -168,7 +168,7 @@ public class JactlTokenBuilder extends BuilderImpl {
     public void error(CompileError err) {
       indent--;
       if (errors.add(err.getMessage())) {
-        type = JactlErrorElementType.ERROR;
+        type = null;
         _done(err);
         isError = true;
         error = err;
@@ -196,9 +196,6 @@ public class JactlTokenBuilder extends BuilderImpl {
     private void _done(Object obj) {
       isDone = true;
       indent--;
-      if (type == null) {
-        System.out.println("ERROR: type cannot be null: obj=" + obj + " (class=" + obj.getClass().getName() + ")");
-      }
       pushEvent(new MarkerEvent(this, MarkerEvent.State.END));
       //String str = obj instanceof Exception ? ((Exception) obj).getMessage() : obj == null ? "null" : obj.getClass().getName();
       //debug(String.format("%06d <-- Marker done(%s)", id, str));

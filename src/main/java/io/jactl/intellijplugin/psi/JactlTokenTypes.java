@@ -101,7 +101,7 @@ public class JactlTokenTypes {
   public static IElementType IF                         = new JactlTokenType("IF", TokenType.IF);
   public static IElementType UNLESS                     = new JactlTokenType("UNLESS", TokenType.UNLESS);
   public static IElementType WHILE                      = new JactlTokenType("WHILE", TokenType.WHILE);
-  public static IElementType UNTIL                      = new JactlTokenType("UNTIL", TokenType.WHILE);
+  public static IElementType UNTIL                      = new JactlTokenType("UNTIL", TokenType.UNTIL);
   public static IElementType ELSE                       = new JactlTokenType("ELSE", TokenType.ELSE);
   public static IElementType CONTINUE                   = new JactlTokenType("CONTINUE", TokenType.CONTINUE);
   public static IElementType BREAK                      = new JactlTokenType("BREAK", TokenType.BREAK);

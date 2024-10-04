@@ -31,10 +31,7 @@ import com.intellij.util.IncorrectOperationException;
 import io.jactl.*;
 import io.jactl.TokenType;
 import io.jactl.intellijplugin.common.JactlPlugin;
-import io.jactl.intellijplugin.psi.JactlNameElementType;
-import io.jactl.intellijplugin.psi.JactlPsiElement;
-import io.jactl.intellijplugin.psi.JactlTokenTypes;
-import io.jactl.intellijplugin.psi.impl.JactlPsiIdentifierImpl;
+import io.jactl.intellijplugin.psi.*;
 import io.jactl.intellijplugin.psi.impl.JactlPsiTypeImpl;
 import io.jactl.intellijplugin.psi.interfaces.JactlPsiName;
 import io.jactl.runtime.ClassDescriptor;
@@ -42,7 +39,6 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.File;
-import java.nio.file.Path;
 import java.util.*;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -134,7 +130,7 @@ public class JactlUtils {
     if (element == null || element instanceof JactlPsiName) {
       return element;
     }
-    return (JactlPsiElement)getFirstChild(element, JactlPsiName.class);
+    return (JactlPsiElement)getFirstDescendant(element, JactlPsiName.class);
   }
 
   private static JactlPsiElement getPsiElementInTree(JactlAstKey key) {
@@ -266,8 +262,8 @@ public class JactlUtils {
     return getFirstDescendant(parent, child -> clss.isAssignableFrom(child.getClass()));
   }
 
-  public static <T extends PsiElement> PsiElement getFirstDescendant(PsiElement parent, IElementType elementType) {
-    return getFirstDescendant(parent, child -> child.getNode().getElementType() == elementType);
+  public static <T extends PsiElement> PsiElement getFirstDescendant(PsiElement parent, IElementType... elementTypes) {
+    return getFirstDescendant(parent, child -> isElementType(child.getNode(), elementTypes));
   }
 
   public static PsiElement getFirstChild(PsiElement parent, Predicate<PsiElement> matcher) {
@@ -288,11 +284,22 @@ public class JactlUtils {
     return null;
   }
 
-  public static PsiElement getFirstDescendant(PsiElement parent, Predicate<PsiElement> matcher) {
+  public static int countChildren(PsiElement parent, Predicate<PsiElement> matcher) {
+    int count = 0;
     for (PsiElement child = parent.getFirstChild(); child != null; child = child.getNextSibling()) {
       if (matcher.test(child)) {
-        return child;
+        count++;
       }
+    }
+    return count;
+
+  }
+
+  public static PsiElement getFirstDescendant(PsiElement parent, Predicate<PsiElement> matcher) {
+    if (matcher.test(parent)) {
+      return parent;
+    }
+    for (PsiElement child = parent.getFirstChild(); child != null; child = child.getNextSibling()) {
       var descendant = getFirstDescendant(child, matcher);
       if (descendant != null) {
         return descendant;
@@ -375,9 +382,9 @@ public class JactlUtils {
     return JactlUtils.getFirstDescendant(newFile, clss);
   }
 
-  public static PsiElement newElement(Project project, String text, IElementType type) {
-    PsiFile newFile = PsiFileFactory.getInstance(project).createFileFromText("A.jactl", JactlLanguage.INSTANCE, text);
-    return JactlUtils.getFirstDescendant(newFile, type);
+  public static PsiElement newElement(Project project, String code, IElementType... types) {
+    PsiFile newFile = PsiFileFactory.getInstance(project).createFileFromText("A.jactl", JactlLanguage.INSTANCE, code);
+    return JactlUtils.getFirstDescendant(newFile, types);
   }
 
   public static boolean isElementType(ASTNode node, IElementType... types) {
@@ -550,8 +557,9 @@ public class JactlUtils {
                                                      .getFileIndex()
                                                      .getSourceRootForFile(file);
     if (moduleSourceRoot != null) {
-      if (file.getPath().startsWith(moduleSourceRoot.getPath())) {
-        String projectPath = file.getPath().substring(moduleSourceRoot.getPath().length() + 1);
+      String path = moduleSourceRoot.getPath();
+      if (file.getPath().startsWith(path)) {
+        String projectPath = path.equals(file.getPath()) ? "" : file.getPath().substring(path.length() + 1);
         return projectPath;
       }
     }
@@ -562,47 +570,99 @@ public class JactlUtils {
     return getProjectPath(item.getProject(), item.getVirtualFile(), defaultValue);
   }
 
-  public static JactlPsiElement createNewPackagePath(PsiDirectory dir, JactlPsiElement psiElement) {
-    String newPackage = JactlUtils.getProjectPath(dir).replace(File.separator, ".");
-    String oldPackage = JactlUtils.parentPackage(psiElement, ".");
-    if (!newPackage.equals(oldPackage)) {
-      String[]      names = newPackage.isEmpty() ? new String[0] : newPackage.split("\\.");
-      int           idx   = 0;
-      StringBuilder sb    = new StringBuilder();
-      for (PsiElement child = psiElement.getParent().getFirstChild(); child != psiElement; child = child.getNextSibling()) {
-        if (child instanceof JactlPsiIdentifierImpl) {
-          if (idx < names.length) {
-            if (child.getText().equals(names[idx])) {
-              sb.append(names[idx++]);
-            }
+  /**
+   * Replace identifiers of a package name with package name corresponding to destDir and return the generated Jactl
+   * string. Note that this preserves comments/whitespace as much as possible.
+   *
+   * @param psiElement    the element (CLASS_PATH_EXPR or PACKAGE)
+   * @param destDir       the destination package
+   * @param preserveFinal true if we should keep last identifier
+   * @return the new Jactl code as a string
+   */
+  public static String replacePackage(PsiElement psiElement, String destDir, boolean preserveFinal) {
+    String dottedPackage  = destDir.replace(File.separatorChar, '.');
+    if (JactlUtils.isElementType(psiElement, JactlTypeElementType.CLASS_TYPE)) {
+      dottedPackage = dottedPackage.isEmpty() ? dottedPackage : dottedPackage + ".";
+      return dottedPackage + psiElement.getText();
+    }
+    String[]      newPackage   = dottedPackage.contains(".") ? dottedPackage.split("\\.") : dottedPackage.isEmpty() ? new String[0] : new String[] { dottedPackage };
+    StringBuilder sb           = new StringBuilder();
+    // Replace each identifier in the package with identifier from new package to preserve comments/whitespace etc
+    int identCount = JactlUtils.countChildren(psiElement, child -> JactlUtils.isElementType(child, JactlTokenTypes.IDENTIFIER));
+    if (preserveFinal) {
+      identCount--;
+    }
+    int newIdx = 0;
+    int dotCounter = 0;
+    int identCounter = 0;
+    for (PsiElement child = psiElement.getFirstChild(); child != null; child = child.getNextSibling()) {
+      if (newIdx < newPackage.length) {
+        if (JactlUtils.isElementType(child, JactlTokenTypes.IDENTIFIER)) {
+          identCounter++;
+          sb.append(newPackage[newIdx++]);
+          if (newIdx == identCount && newIdx < newPackage.length) {
+            // If no more identifiers in the old pacakge then add remainder of new package
+            sb.append('.').append(Arrays.stream(newPackage).skip(newIdx).collect(Collectors.joining(".")));
+            newIdx = newPackage.length;
           }
         }
-        else if (child.getNode().getElementType() == JactlTokenTypes.DOT) {
-          // Add '.' for each element of names (including last one)
-          if (idx <= names.length && names.length != 0) {
-            sb.append('.');
-            idx = idx == names.length ? idx + 1 : idx;
+        else {
+          if (JactlUtils.isElementType(child, JactlTokenTypes.DOT)) {
+            dotCounter++;
+          }
+          sb.append(child.getText());
+        }
+      }
+      else {
+        // Add anything that is not a DOT or an IDENTIFIER but also add last DOT and IDENTIFIER if preserveLast is set
+        if (JactlUtils.isElementType(child, JactlTokenTypes.IDENTIFIER)) {
+          identCounter++;
+          if (preserveFinal && identCounter == identCount + 1) {
+            sb.append(child.getText());
+          }
+        }
+        else
+        if (JactlUtils.isElementType(child, JactlTokenTypes.DOT)) {
+          dotCounter++;
+          if (preserveFinal && dotCounter == identCount && newPackage.length > 0) {
+            sb.append(child.getText());
           }
         }
         else {
           sb.append(child.getText());
         }
       }
-      // If we still have names left (package name is now longer)
-      for (; idx < names.length; idx++) {
-        sb.append(names[idx]).append('.');
-      }
-
-      // Add rest of the class path
-      for (PsiElement child = psiElement; child != null; child = child.getNextSibling()) {
-        sb.append(child.getText());
-      }
-      var newParent = JactlUtils.newElement(psiElement.getProject(), sb.toString(), psiElement.getParent().getNode().getElementType());
-      newParent = psiElement.getParent().replace(newParent);
-      // Find where we are now in new parent
-      return (JactlPsiElement)JactlUtils.getNthChild(newParent, names.length, JactlTokenTypes.IDENTIFIER);
     }
-    return psiElement;
+    return sb.toString();
+  }
+
+  /**
+   * Given an identifier that is part of a CLASS_PATH_EXPR or CLASS_TYPE,
+   * replace the package part with the package corresponding to the given
+   * dir and then return the identifier of the new CLASS_PATH_EXPR or CLASS_TYPE.
+   * @param dir         the directory of the package
+   * @param psiElement  the original element
+   * @return the identifier in the new CLASS_PATH_EXPR or CLASS_TYPE
+   */
+  public static JactlPsiElement createNewPackagePath(PsiDirectory dir, JactlPsiElement psiElement) {
+    String destDir = JactlUtils.getProjectPath(dir);
+    String newCode = replacePackage(psiElement.getParent(), destDir, true);
+    // Prepend "new" to the code to force it to be parsed as a CLASS_PATH_EXPR or CLASS_TYPE as appropriate
+    newCode = "new " + newCode;
+    var newParent = JactlUtils.newElement(psiElement.getProject(), newCode, JactlExprElementType.CLASS_PATH_EXPR, JactlTypeElementType.CLASS_TYPE);
+    // If we have a nested CLASS_PATH_EXPR then prefer to use it unless we previously had a CLASS_TYPE
+    if (JactlUtils.isElementType(newParent, JactlTypeElementType.CLASS_TYPE) && !JactlUtils.isElementType(psiElement.getParent(), JactlTypeElementType.CLASS_TYPE)) {
+      var classPathExpr = JactlUtils.getFirstDescendant(newParent, JactlExprElementType.CLASS_PATH_EXPR);
+      newParent = classPathExpr == null ? newParent : classPathExpr;
+    }
+    newParent = psiElement.getParent().replace(newParent);
+    // Find where we are now in new parent
+    if (JactlUtils.isElementType(newParent, JactlExprElementType.CLASS_PATH_EXPR)) {
+      int partsCount = (int) destDir.chars().filter(c -> c == File.separatorChar).count();
+      return (JactlPsiElement)JactlUtils.getNthChild(newParent, partsCount, JactlTokenTypes.IDENTIFIER);
+    }
+    // Must have a CLASS_TYPE
+    return (JactlPsiElement)JactlUtils.getFirstDescendant(newParent, JactlTokenTypes.IDENTIFIER);
   }
 
   public static <T> Stream<T> stream(T initial, Function<T,T> generator) {

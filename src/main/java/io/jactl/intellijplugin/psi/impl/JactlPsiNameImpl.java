@@ -13,10 +13,13 @@ import io.jactl.intellijplugin.JactlUtils;
 import io.jactl.intellijplugin.psi.AbstractJactlPsiStmt;
 import io.jactl.intellijplugin.psi.JactlNameElementType;
 import io.jactl.intellijplugin.psi.JactlPsiElement;
+import io.jactl.intellijplugin.psi.JactlStmtElementType;
 import io.jactl.intellijplugin.psi.interfaces.JactlPsiName;
 import io.jactl.runtime.ClassDescriptor;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+
+import static io.jactl.intellijplugin.psi.JactlStmtElementType.*;
 
 public class JactlPsiNameImpl extends AbstractJactlPsiStmt implements JactlPsiName {
 
@@ -72,9 +75,28 @@ public class JactlPsiNameImpl extends AbstractJactlPsiStmt implements JactlPsiNa
     return false;
   }
 
+  /**
+   * Find parent VarDecl/FunDecl/ClassDecl.
+   * Note that this is really just to skip any LIST that exists for VarDecls.
+   * @return the nearest parent that is a VarDecl/FunDecl/ClassDecl
+   */
+  private JactlPsiElement getDeclParent() {
+    for (PsiElement parent = getParent(); parent != null; parent = parent.getParent()) {
+      if (JactlUtils.isElementType(parent, VAR_DECL, FUN_DECL, CLASS_DECL)) {
+        return (JactlPsiElement)parent;
+      }
+    }
+    return null;
+  }
+
   @Override
   public @NotNull SearchScope getUseScope() {
-    var jactlAstNode = ((JactlPsiElement) getParent()).getJactlAstNode();
+    var parent = getDeclParent();
+    if (parent == null) {
+      LOG.warn("Could not find decl parent for " + this);
+      return GlobalSearchScope.allScope(getProject());
+    }
+    var jactlAstNode = parent.getJactlAstNode();
     var block = jactlAstNode.getBlock();
     if (block == null) {
       LOG.warn("Block is null for " + jactlAstNode);

@@ -11,7 +11,11 @@ import io.jactl.intellijplugin.JactlParserAdapter;
 import io.jactl.intellijplugin.psi.impl.JactlPsiIdentifierImpl;
 import org.jetbrains.annotations.NotNull;
 
+/**
+ * Base class for Jactl PSI elements
+ */
 public abstract class AbstractJactlPsiElement extends ASTWrapperPsiElement implements JactlPsiElement {
+
   public AbstractJactlPsiElement(@NotNull ASTNode node) {
     super(node);
   }

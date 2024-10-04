@@ -25,10 +25,8 @@ import com.intellij.psi.formatter.common.AbstractBlock;
 import io.jactl.intellijplugin.JactlLanguage;
 import io.jactl.intellijplugin.JactlParserDefinition;
 import io.jactl.intellijplugin.JactlUtils;
-import io.jactl.intellijplugin.psi.JactlExprElementType;
-import io.jactl.intellijplugin.psi.JactlListElementType;
-import io.jactl.intellijplugin.psi.JactlNameElementType;
-import io.jactl.intellijplugin.psi.JactlStmtElementType;
+import io.jactl.intellijplugin.psi.*;
+import io.jactl.intellijplugin.psi.interfaces.JactlPsiList;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -53,34 +51,38 @@ public class JactlFormatingModelBuilder implements FormattingModelBuilder {
 
   private SpacingBuilder createSpaceBuilder(CodeStyleSettings settings) {
     return new SpacingBuilder(settings, JactlLanguage.INSTANCE);
-//             .around(SimpleTypes.SEPARATOR)
-//             .spaceIf(settings.getCommonSettings(SimpleLanguage.INSTANCE.getID()).SPACE_AROUND_ASSIGNMENT_OPERATORS)
-//             .before(SimpleTypes.PROPERTY)
-//             .none();
   }
 
   private boolean isList(ASTNode node) {
     return node.getElementType() == JactlListElementType.LIST;
   }
 
-  private List<Block> buildChildren(ASTNode node, SpacingBuilder spacingBuilder) {
+  private List<Block> buildChildren(JactlAbstractBlock parentBlock, ASTNode node, SpacingBuilder spacingBuilder) {
     List<Block> blocks = new ArrayList<>();
     Alignment alignment   = null;
     if (isList(node)) {
       // Create alignment for args or for init/cond/update part of "for" stmt
       alignment = Alignment.createAlignment();
     }
+    else {
+      alignment = parentBlock.getAlignment();
+    }
     for (ASTNode child  = node.getFirstChildNode(); child != null; child = child.getTreeNext()) {
       if (child.getElementType() == TokenType.WHITE_SPACE) {
         continue;
+      }
+      if (JactlUtils.isElementType(child, JactlExprElementType.CLOSURE)) {
+        // Don't align closures even when passed as args to calls
+        alignment = null;
       }
       Block block;
       if (child.getFirstChildNode() == null) {
         boolean isSpecialChar = JactlUtils.isElementType(child, LEFT_BRACE, RIGHT_BRACE, LEFT_SQUARE, RIGHT_SQUARE, LEFT_PAREN, RIGHT_PAREN);
         Indent indent = isSpecialChar                            ? Indent.getNoneIndent() :
-                        JactlUtils.isElementType(child, COMMENT) ? Indent.getNormalIndent()
+                        JactlUtils.isElementType(child, COMMENT) ? Indent.getNormalIndent() :
+                        alignment != null                        ? Indent.getNoneIndent()
                                                                  : Indent.getContinuationWithoutFirstIndent();
-        block = new LeafBlock(child, spacingBuilder, indent, alignment);
+        block = new JactlLeafBlock(child, spacingBuilder, indent, alignment);
       }
       else if (child.getElementType() == JactlStmtElementType.BLOCK) {
         block = new JactlCodeBlock(child, Wrap.createWrap(WrapType.NONE, false), alignment, spacingBuilder, false);
@@ -97,7 +99,6 @@ public class JactlFormatingModelBuilder implements FormattingModelBuilder {
       blocks.add(block);
     }
     return blocks;
-
   }
 
   abstract class JactlAbstractBlock extends AbstractBlock {
@@ -109,7 +110,7 @@ public class JactlFormatingModelBuilder implements FormattingModelBuilder {
       this.spacingBuilder = spacingBuilder;
       this.isTopLevel     = isTopLevel;
     }
-    @Override protected List<Block> buildChildren() { return childBlocks = JactlFormatingModelBuilder.this.buildChildren(getNode(), spacingBuilder); }
+    @Override protected List<Block> buildChildren() { return childBlocks = JactlFormatingModelBuilder.this.buildChildren(this, getNode(), spacingBuilder); }
 
     @Override
     public boolean isIncomplete() {
@@ -117,22 +118,28 @@ public class JactlFormatingModelBuilder implements FormattingModelBuilder {
       return result;
     }
 
+    //
+    // This controls how the indenting/alignment works for the first line after "enter" pressed
+    //
     @Override public @NotNull ChildAttributes getChildAttributes(int newChildIndex) {
       Alignment alignment = null;
-      if (isList(getNode()) && childBlocks != null && childBlocks.size() > 2) {
+      if (isList(getNode()) && childBlocks != null && childBlocks.size() >= 2) {
         // Align args to call based on alignment of first arg
         alignment = childBlocks.get(0).getAlignment();
       }
       else if (getNode().getElementType() == JactlStmtElementType.FOR_STMT && childBlocks != null) {
         alignment = childBlocks.stream().map(Block::getAlignment).filter(Objects::nonNull).findFirst().orElse(null);
       }
+      else if (newChildIndex == 0) {
+        alignment = getAlignment();    // If parent is aligned then first child should be aligned
+      }
       return new ChildAttributes(isTopLevel ? Indent.getNoneIndent() : Indent.getNormalIndent(), alignment);
     }
   }
 
-  class LeafBlock extends JactlAbstractBlock {
+  class JactlLeafBlock extends JactlAbstractBlock {
     Indent indent;
-    LeafBlock(ASTNode node, SpacingBuilder spacingBuilder, Indent indent, Alignment alignment) {
+    JactlLeafBlock(ASTNode node, SpacingBuilder spacingBuilder, Indent indent, Alignment alignment) {
       super(node, Wrap.createWrap(WrapType.NORMAL, false), alignment, spacingBuilder, false);
       this.indent = indent;
     }
@@ -148,7 +155,12 @@ public class JactlFormatingModelBuilder implements FormattingModelBuilder {
     }
     @Override public @Nullable Spacing getSpacing(@Nullable Block child1, @NotNull Block child2) { return null; }
     @Override public boolean isLeaf() { return false; }
-    @Override public @Nullable Indent getIndent() { return isTopLevel ? Indent.getNoneIndent() : Indent.getNormalIndent(); }
+    @Override public @Nullable Indent getIndent() {
+      if (myNode instanceof JactlPsiList) {
+        return Indent.getNormalIndent();
+      }
+      return isTopLevel || myAlignment != null ? Indent.getNoneIndent() : Indent.getNormalIndent();
+    }
   }
 
   class JactlBlock extends JactlAbstractBlock {
@@ -156,7 +168,7 @@ public class JactlFormatingModelBuilder implements FormattingModelBuilder {
       super(node, null, alignment, spacingBuilder, false);
     }
     @Override public @Nullable Spacing getSpacing(@Nullable Block child1, @NotNull Block child2) { return null; }
-    @Override public @Nullable Indent getIndent() { return Indent.getContinuationWithoutFirstIndent(); }
+    @Override public @Nullable Indent getIndent() { return getAlignment() == null ? Indent.getContinuationWithoutFirstIndent() : Indent.getNoneIndent(); }
     @Override public boolean isLeaf() { return false; }
   }
 
@@ -164,7 +176,7 @@ public class JactlFormatingModelBuilder implements FormattingModelBuilder {
     JactlCodeBlock(ASTNode node, Wrap wrap, Alignment alignment, SpacingBuilder spacingBuilder, boolean isTopLevel) {
       super(node, wrap, alignment, spacingBuilder, isTopLevel);
     }
-    @Override public Indent getIndent() { return Indent.getNoneIndent(); }
+    @Override public Indent getIndent() { return Indent.getNormalIndent(); }
     @Override public Spacing getSpacing(@Nullable Block child1, @NotNull Block child2) {
       return spacingBuilder.getSpacing(this, child1, child2);
     }

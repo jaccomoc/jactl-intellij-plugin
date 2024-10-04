@@ -34,6 +34,7 @@
     <completion.contributor        language="Jactl" implementationClass="io.jactl.intellijplugin.extensions.JactlCompletionContributor" />
     <lang.documentationProvider    language="Jactl" implementationClass="io.jactl.intellijplugin.extensions.JactlDocumentationProvider"/>
     <lang.findUsagesProvider       language="Jactl" implementationClass="io.jactl.intellijplugin.extensions.JactlFindUsagesProvider" />
+    <refactoring.moveHandler       id="jactl.movedirectry" order="first,before kotlinAwareJavaMoveClassesOrPackagesHandler"  implementation="io.jactl.intellijplugin.extensions.JactlMoveDirectoryHandler" />
     <moveFileHandler                                implementation="io.jactl.intellijplugin.extensions.JactlMoveFileHandler" />
     <lang.refactoringSupport       language="Jactl" implementationClass="io.jactl.intellijplugin.extensions.JactlRefactoringSupportProvider"/>
     <lang.formatter                language="Jactl" implementationClass="io.jactl.intellijplugin.extensions.JactlFormatingModelBuilder" />

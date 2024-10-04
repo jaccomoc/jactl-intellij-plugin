@@ -3,13 +3,10 @@ package io.jactl.intellijplugin;
 import com.intellij.codeInsight.TargetElementUtil;
 import com.intellij.find.FindManager;
 import com.intellij.find.impl.FindManagerImpl;
-import com.intellij.openapi.application.WriteAction;
 import com.intellij.psi.PsiElement;
 import com.intellij.testFramework.fixtures.BasePlatformTestCase;
 import com.intellij.usageView.UsageInfo;
 import com.intellij.util.CommonProcessors;
-
-import java.io.IOException;
 
 public class FindUsageTests extends BasePlatformTestCase {
   @Override
@@ -22,31 +19,6 @@ public class FindUsageTests extends BasePlatformTestCase {
     System.out.println(getTestName(true));
     String testData = "";
     myFixture.copyDirectoryToProject("completionTests", testData);
-  }
-
-  private void test(String text, String... expected) {
-    testWithFileName("script.jactl", text, expected);
-  }
-
-  private void testWithFileName(String fileName, String text, String... expected) {
-    int idx = text.indexOf("<caret>");
-    text = text.replaceAll("<caret>", "");
-    myFixture.addFileToProject(fileName, text);
-    var psiFile = myFixture.configureByFile(fileName);
-    var element = psiFile.findElementAt(idx);
-    try {
-      var usages = myFixture.findUsages(element);
-    }
-    finally {
-      WriteAction.run(() -> {
-        try {
-          psiFile.getVirtualFile().delete(null);
-        }
-        catch (IOException e) {
-          throw new RuntimeException(e);
-        }
-      });
-    }
   }
 
   private int usageCount() {
@@ -92,8 +64,12 @@ public class FindUsageTests extends BasePlatformTestCase {
     test("def x<caret>x = 1; fff(2); def fff(y) { xx + y + \"${xx}\".size() }; fff(1) + xx; fff(xx);", 4);
   }
 
+  public void testVariable2() {
+    test("def abc = 2, x<caret>x = 1; fff(2); def fff(y) { xx + y + \"${xx}\".size() }; fff(1) + xx; fff(xx);", 4);
+  }
+
   public void testParameter() {
-    test("def fff(int x<caret>x, int yy) { fff(2); xx + yy + \"${xx}\".size(); xx; fff(xx); }", 4);
+    test("def fff(int x<caret>x, int yy) { fff(2); xx + yy + \"${xx}\".size(); xx; def g() { fff(xx); } }", 4);
   }
 
   public void testClass() {
@@ -191,6 +167,12 @@ public class FindUsageTests extends BasePlatformTestCase {
 
   public void testField() {
     myFixture.addFileToProject("a/b/CCC.jactl", "package a.b; class CCC{ def f<caret>ff; def f(){fff} }");
+    myFixture.configureByFiles("a/b/CCC.jactl");
+    assertEquals(1, usageCount());
+  }
+
+  public void testFieldList() {
+    myFixture.addFileToProject("a/b/CCC.jactl", "package a.b; class CCC{ int ggg=1, f<caret>ff; def f(){fff} }");
     myFixture.configureByFiles("a/b/CCC.jactl");
     assertEquals(1, usageCount());
   }

@@ -22,7 +22,6 @@ import java.util.function.Predicate;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
-import static io.jactl.intellijplugin.psi.JactlErrorElementType.ERROR;
 import static io.jactl.intellijplugin.psi.JactlListElementType.LIST;
 
 public class JactlParserAdapter implements PsiParser {
@@ -47,7 +46,7 @@ public class JactlParserAdapter implements PsiParser {
 
     JactlFile file = (JactlFile)builder.getUserData(FileContextUtil.CONTAINING_FILE_KEY);
 
-    //builder.setDebugMode(true);
+    builder.setDebugMode(true);
 
     JactlTokeniser tokeniser = (JactlTokeniser)((PsiBuilderImpl)builder).getLexer();
     parse(tokeniser, file, builder);
@@ -122,7 +121,7 @@ public class JactlParserAdapter implements PsiParser {
           }
         }
         else {
-          if (marker.psiMarker != null && marker.type instanceof JactlErrorElementType) {
+          if (marker.psiMarker != null && marker.error != null) {
             marker.psiMarker.error(marker.error.getErrorMessage());
             marker.doneFlagged = true;
           }
@@ -248,6 +247,11 @@ public class JactlParserAdapter implements PsiParser {
     return getClassDecl(file, file.getText(), JactlPlugin.removePackage(fqClassName));
   }
 
+  public static boolean isImported(JactlPsiElement className) {
+    var parser = getParsedScript(className.getFile(), className.getSourceCode());
+    return parser.resolver.getImports().containsKey(className.getText());
+  }
+
   //////////////////////////////////////////////////
 
   private static class ParsedScript {
@@ -275,7 +279,7 @@ public class JactlParserAdapter implements PsiParser {
         node.setUserData(key);
         return;
       }
-      if (type != ERROR && type != LIST) {
+      if (type != null && type != LIST) {
         LOG.warn("Node is null (type=" + type + ", offset=" + offset + ")");
       }
     }

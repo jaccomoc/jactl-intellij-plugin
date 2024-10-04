@@ -48,7 +48,9 @@ public class JactlTokeniser extends Lexer {
   public void start(@NotNull CharSequence charSequence, int startOffset, int endOffset, int initialState) {
     tokenise(charSequence, startOffset, endOffset);
     nextToken = null;
-    for (tokenIter = jactlBuilder.getEvents().stream().filter(JactlTokenBuilder.Event::isToken).map(evt -> ((JactlTokenBuilder.TokenEvent) evt).token).toList().listIterator();
+    List<JactlTokenBuilder.Event> events = jactlBuilder.getEvents();
+    List<Token>                   tokens = events.stream().filter(JactlTokenBuilder.Event::isToken).map(evt -> ((JactlTokenBuilder.TokenEvent) evt).token).toList();
+    for (tokenIter = tokens.listIterator();
          tokenIter.hasNext(); ) {
       advance();
       if (nextToken.getOffset() >= startOffset) {
@@ -74,7 +76,7 @@ public class JactlTokeniser extends Lexer {
   public CharSequence             getText()         { return bufferSequence; }
   public Stmt.ClassDecl           getJactl()        { return script; }
   public JactlContext             getJactlContext() { return jactlContext; }
-  public List<JactlTokenBuilder.Event> getEvents()       { return jactlBuilder.events; }
+  public List<JactlTokenBuilder.Event> getEvents()  { return jactlBuilder.events; }
   @Override public int            getState()        { return 0; }
   @Override public IElementType   getTokenType()    { return current; }
   @Override public int            getTokenStart()   { return tokenStart; }

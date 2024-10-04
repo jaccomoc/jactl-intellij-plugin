@@ -2,6 +2,14 @@ import org.jetbrains.intellij.platform.gradle.TestFrameworkType
 
 plugins {
     id("org.jetbrains.intellij.platform") version "2.0.1"
+    id("java")
+}
+
+java {
+    withJavadocJar()
+    withSourcesJar()
+    sourceCompatibility = JavaVersion.VERSION_17;
+    targetCompatibility = JavaVersion.VERSION_17;
 }
 
 repositories {
@@ -23,7 +31,7 @@ dependencies {
     }
     implementation("io.jactl:jactl:2.0.1-SNAPSHOT")
     implementation(project(":jps-plugin"))
-    testImplementation("junit:junit:4.13")
+    testImplementation("junit:junit:4.13.1")
     testRuntimeOnly("junit:junit:4.13")
 
 }

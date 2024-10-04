@@ -96,8 +96,7 @@ public class JactlHighlightAnnotator implements Annotator {
     }
     else if (element instanceof JactlPsiTypeImpl type) {
       if (!type.isBuiltIn() && type.findClassDefinition() == null) {
-        error.accept("Unknown type");
-        return;
+        error.accept("Unknown type " + type.getText());
       }
       else {
         holder.newSilentAnnotation(HighlightSeverity.INFORMATION)

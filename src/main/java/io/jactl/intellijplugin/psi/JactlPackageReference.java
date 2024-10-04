@@ -63,7 +63,7 @@ public class JactlPackageReference extends PsiReferenceBase<PsiElement> implemen
   @Override
   public PsiElement bindToElement(@NotNull PsiElement element) throws IncorrectOperationException {
     if (element instanceof PsiDirectory dir) {
-      psiElement = JactlUtils.createNewPackagePath(dir.getParent(), psiElement);
+      psiElement = JactlUtils.createNewPackagePath(dir, psiElement);
       return psiElement;
     }
     return super.bindToElement(element);

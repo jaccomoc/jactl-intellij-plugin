@@ -54,7 +54,10 @@ public class JactlAstKey {
   public boolean equals(Object obj) {
     if (this == obj) { return true; }
     if (obj instanceof JactlAstKey other) {
-      return type.equals(other.type) && offset == other.offset;
+      if (type != null && !type.equals(other.type) || type == null && other.type != null) {
+        return false;
+      }
+      return offset == other.offset;
     }
     return false;
   }

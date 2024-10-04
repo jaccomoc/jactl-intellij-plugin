@@ -17,6 +17,8 @@ import io.jactl.runtime.Functions;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.io.File;
+
 public class JactlPsiReference extends PsiReferenceBase<PsiElement> implements PsiPolyVariantReference {
   public static final Logger LOG = Logger.getInstance(JactlPsiReference.class);
 
@@ -62,9 +64,26 @@ public class JactlPsiReference extends PsiReferenceBase<PsiElement> implements P
 
   @Override
   public PsiElement bindToElement(@NotNull PsiElement element) throws IncorrectOperationException {
-    if (element instanceof PsiFile file && psiElement.getParent().getNode().getElementType() == JactlExprElementType.CLASS_PATH_EXPR) {
-      psiElement = JactlUtils.createNewPackagePath(file.getContainingDirectory(), psiElement);
-      return this.psiElement;
+    if (element instanceof PsiFile file) {
+      if (psiElement.getParent().getNode().getElementType() == JactlExprElementType.CLASS_PATH_EXPR) {
+        psiElement = JactlUtils.createNewPackagePath(file.getContainingDirectory(), psiElement);
+      }
+      else
+      if (psiElement.getParent().getParent().getNode().getElementType() == JactlTypeElementType.CLASS_TYPE) {
+        // If class is imported then we don't do anything since we will rewrite the import statement
+        if (!JactlParserAdapter.isImported(psiElement)) {
+          // Otherwise we need to add the new package name to the class name
+          psiElement = JactlUtils.createNewPackagePath(file.getContainingDirectory(), (JactlPsiElement)psiElement.getParent());
+
+//          String newPackage = JactlUtils.getProjectPath(file.getContainingDirectory()).replace(File.separator, ".");
+//          newPackage = newPackage.isEmpty() ? "" : newPackage + ".";
+//          var    newParent  = JactlUtils.newElement(psiElement.getProject(), newPackage + psiElement.getText(), JactlExprElementType.CLASS_PATH_EXPR);
+//          newParent = psiElement.getParent().replace(newParent);
+//          // Find where we are now in new parent
+//          psiElement = (JactlPsiElement) JactlUtils.getNthChild(newParent, newPackage.split("\\.").length, JactlTokenTypes.IDENTIFIER);
+        }
+      }
+      return psiElement;
     }
     return super.bindToElement(element);
   }
@@ -190,7 +209,7 @@ public class JactlPsiReference extends PsiReferenceBase<PsiElement> implements P
     }
     // Get the ClassDecl again in case file needs reparsing due to changes
     JactlAstKey classDeclKey = classDecl.getUserData(JactlAstKey.class);
-    classDecl = JactlParserAdapter.getClassDecl(classDeclKey.getFile(), classDeclKey.getFile().getText(), descriptor.getNamePath());
+     classDecl = JactlParserAdapter.getClassDecl(classDeclKey.getFile(), classDeclKey.getFile().getText(), descriptor.getNamePath());
     if (classDecl == null) {
       LOG.warn("ClassDescriptor for parent (" + descriptor.getPrettyName() + ") still has no ClassDecl");
       return null;
