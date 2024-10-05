@@ -27,26 +27,38 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import javax.swing.*;
+import java.util.HashMap;
 import java.util.Map;
 
 final class JactlColorSettingsPage implements ColorSettingsPage {
 
   private static final AttributesDescriptor[] DESCRIPTORS = new AttributesDescriptor[]{
     new AttributesDescriptor("Keyword", JactlSyntaxHighLighter.KEY),
-    new AttributesDescriptor("Separator", JactlSyntaxHighLighter.SEPARATOR),
+    new AttributesDescriptor("Separator", JactlSyntaxHighLighter.SEMICOLON),
     new AttributesDescriptor("Number", JactlSyntaxHighLighter.NUMBER),
     new AttributesDescriptor("String", JactlSyntaxHighLighter.STRING),
-    new AttributesDescriptor("Identifier", JactlSyntaxHighLighter.IDENTIFIER),
-    new AttributesDescriptor("Function declaration", JactlSyntaxHighLighter.FUNCTION_DECLARATION),
-    new AttributesDescriptor("Variable declaration", JactlSyntaxHighLighter.VARIABLE_DECLARATION),
+    new AttributesDescriptor("Identifiers//Identifier", JactlSyntaxHighLighter.IDENTIFIER),
+    new AttributesDescriptor("Identifiers//Function", JactlSyntaxHighLighter.FUNCTION),
+    new AttributesDescriptor("Identifiers//Variable", JactlSyntaxHighLighter.LOCAL_VARIABLE),
+    new AttributesDescriptor("Identifiers//Field", JactlSyntaxHighLighter.FIELD),
+    new AttributesDescriptor("Identifiers//Parameter", JactlSyntaxHighLighter.PARAMETER),
+    new AttributesDescriptor("Identifiers//Method", JactlSyntaxHighLighter.METHOD),
+    new AttributesDescriptor("Identifiers//Class", JactlSyntaxHighLighter.CLASS),
+    new AttributesDescriptor("Identifiers//Package", JactlSyntaxHighLighter.PACKAGE),
+    new AttributesDescriptor("Symbols//Braces", JactlSyntaxHighLighter.BRACES),
+    new AttributesDescriptor("Symbols//Brackets", JactlSyntaxHighLighter.BRACKETS),
+    new AttributesDescriptor("Symbols//Parentheses", JactlSyntaxHighLighter.PARENTHESES),
+    new AttributesDescriptor("Symbols//SemiColon", JactlSyntaxHighLighter.SEMICOLON),
+    new AttributesDescriptor("Symbols//Dot", JactlSyntaxHighLighter.DOT),
+    new AttributesDescriptor("Symbols//Comma", JactlSyntaxHighLighter.COMMA),
+    new AttributesDescriptor("Symbols//Operators", JactlSyntaxHighLighter.OPERATOR),
     new AttributesDescriptor("Type", JactlSyntaxHighLighter.TYPE),
     new AttributesDescriptor("Comment", JactlSyntaxHighLighter.COMMENT),
     new AttributesDescriptor("Bad value", JactlSyntaxHighLighter.BAD_CHARACTER)
   };
 
-  @Nullable
   @Override
-  public Icon getIcon() {
+  public @NotNull Icon getIcon() {
     return JactlIcons.FILE;
   }
 
@@ -59,18 +71,61 @@ final class JactlColorSettingsPage implements ColorSettingsPage {
   @NotNull
   @Override
   public String getDemoText() {
-    return "// This is a line comment\n" +
-           "/* And this is a multi-line comment */\n" +
-           "def func(String s) {\n" +
-           "  \"Interpolated ${'string'}: $s\"\n" +
-           "}\n" +
-           "def (x,y) = [1234, 1.234]; println \"x=$x, y=$y\"\n";
+    return
+      """
+      package <package>a.b.c</package>
+      import <class>a.b.BaseClass</class>
+      import static <class>a.b.BaseClass</class>.<field>FFF</field> as <identifier>GGG</identifier>
+      
+      // This is a line comment
+      /* And this is a multi-
+         line comment */
+      def <function>func</function>(String <parameter>str</parameter>) {
+        def (<variable>xvar</variable>,<variable>yvar</variable>) = [1234, 1.234]
+        String <variable>result</variable> = "Interpolated ${'string'}: $<parameter>str</parameter>: x=$<variable>xvar</variable>, y=$<variable>yvar</variable>"
+        return <variable>result</variable>
+      }
+      
+      def <variable>variable</variable> = <function>func</function>('data')
+      
+      class <class>SomeClass</class> extends <class>BaseClass</class> {
+        class <class>Inner</class> {
+          const <field>MAX</field> = 10000
+          static def <function>calc</function>(int <parameter>count</parameter>, def <parameter>callable</parameter>) {
+            def <variable>result</variable>
+            for (int <variable>i</variable> = 0; <variable>i</variable> < <parameter>count</parameter> && <variable>i</variable> < <field>MAX</field>; <variable>i</variable>++) {
+              <variable>result</variable> += <parameter>callable</parameter>(<variable>i</variable>)
+            }
+            return <variable>result</variable>
+          }
+        }
+      
+        int <field>intField</field>
+        double <field>doubleField</field>
+        def <method>instanceFunc</method>(<parameter>param</parameter>) {
+          switch (<parameter>param</parameter>) {
+            [String,_,int] -> true
+            default        -> false
+          }
+        }
+      }
+      """;
   }
+
+  private static final Map<String,TextAttributesKey> ADDITIONAL = new HashMap<>() {{
+    put("variable",  JactlSyntaxHighLighter.LOCAL_VARIABLE);
+    put("parameter", JactlSyntaxHighLighter.PARAMETER);
+    put("field",     JactlSyntaxHighLighter.FIELD);
+    put("class",     JactlSyntaxHighLighter.CLASS);
+    put("package",   JactlSyntaxHighLighter.PACKAGE);
+    put("method",    JactlSyntaxHighLighter.METHOD);
+    put("function",  JactlSyntaxHighLighter.FUNCTION);
+  }};
 
   @Nullable
   @Override
   public Map<String, TextAttributesKey> getAdditionalHighlightingTagToDescriptorMap() {
-    return null;
+    return ADDITIONAL;
   }
 
   @Override
@@ -88,4 +143,5 @@ final class JactlColorSettingsPage implements ColorSettingsPage {
   public String getDisplayName() {
     return "Jactl";
   }
+
 }

@@ -17,6 +17,7 @@
 
 package io.jactl.intellijplugin.extensions;
 
+import com.intellij.ide.highlighter.JavaHighlightingColors;
 import com.intellij.lexer.Lexer;
 import com.intellij.openapi.editor.DefaultLanguageHighlighterColors;
 import com.intellij.openapi.editor.HighlighterColors;
@@ -31,30 +32,48 @@ import io.jactl.intellijplugin.psi.JactlTokenType;
 import org.jetbrains.annotations.NotNull;
 
 import static com.intellij.openapi.editor.colors.TextAttributesKey.createTextAttributesKey;
+import static io.jactl.TokenType.*;
 
 public class JactlSyntaxHighLighter extends SyntaxHighlighterBase {
 
-  public static final TextAttributesKey SEPARATOR            = createTextAttributesKey("JACTL_SEPARATOR", DefaultLanguageHighlighterColors.OPERATION_SIGN);
-  public static final TextAttributesKey KEY                  = createTextAttributesKey("JACTL_KEY", DefaultLanguageHighlighterColors.KEYWORD);
-  public static final TextAttributesKey NUMBER               = createTextAttributesKey("JACTL_NUMBER", DefaultLanguageHighlighterColors.NUMBER);
-  public static final TextAttributesKey STRING               = createTextAttributesKey("JACTL_STRING", DefaultLanguageHighlighterColors.STRING);
-  public static final TextAttributesKey IDENTIFIER           = createTextAttributesKey("JACTL_IDENTIFIER", DefaultLanguageHighlighterColors.IDENTIFIER);
-  public static final TextAttributesKey FUNCTION_DECLARATION = createTextAttributesKey("JACTL_FUNCTION_DECLARATION", DefaultLanguageHighlighterColors.FUNCTION_DECLARATION);
-  public static final TextAttributesKey VARIABLE_DECLARATION = createTextAttributesKey("JACTL_VARIABLE", DefaultLanguageHighlighterColors.GLOBAL_VARIABLE);
-  public static final TextAttributesKey TYPE                 = createTextAttributesKey("JACTL_TYPE", DefaultLanguageHighlighterColors.CLASS_REFERENCE);
-  public static final TextAttributesKey COMMENT              = createTextAttributesKey("JACTL_COMMENT", DefaultLanguageHighlighterColors.LINE_COMMENT);
-  public static final TextAttributesKey BAD_CHARACTER        = createTextAttributesKey("JACTL_BAD_CHARACTER", HighlighterColors.BAD_CHARACTER);
+  public static final TextAttributesKey SEMICOLON       = createTextAttributesKey("JACTL_SEMICOLON", JavaHighlightingColors.JAVA_SEMICOLON);
+  public static final TextAttributesKey COMMA           = createTextAttributesKey("JACTL_COMMA", JavaHighlightingColors.COMMA);
+  public static final TextAttributesKey DOT             = createTextAttributesKey("JACTL_DOT", JavaHighlightingColors.DOT);
+  public static final TextAttributesKey BRACES          = createTextAttributesKey("JACTL_BRACES", JavaHighlightingColors.BRACES);
+  public static final TextAttributesKey BRACKETS        = createTextAttributesKey("JACTL_BRACKETS", JavaHighlightingColors.BRACKETS);
+  public static final TextAttributesKey PARENTHESES     = createTextAttributesKey("JACTL_PARENTHESE", JavaHighlightingColors.PARENTHESES);
+  public static final TextAttributesKey OPERATOR        = createTextAttributesKey("JACTL_OPERATOR", JavaHighlightingColors.OPERATION_SIGN);
+  public static final TextAttributesKey KEY             = createTextAttributesKey("JACTL_KEY", JavaHighlightingColors.KEYWORD);
+  public static final TextAttributesKey NUMBER          = createTextAttributesKey("JACTL_NUMBER", JavaHighlightingColors.NUMBER);
+  public static final TextAttributesKey STRING          = createTextAttributesKey("JACTL_STRING", JavaHighlightingColors.STRING);
+  public static final TextAttributesKey IDENTIFIER      = createTextAttributesKey("JACTL_IDENTIFIER", DefaultLanguageHighlighterColors.IDENTIFIER);
+  public static final TextAttributesKey TYPE            = createTextAttributesKey("JACTL_TYPE", JavaHighlightingColors.CLASS_NAME_ATTRIBUTES);
+  public static final TextAttributesKey COMMENT         = createTextAttributesKey("JACTL_COMMENT", JavaHighlightingColors.LINE_COMMENT);
+  public static final TextAttributesKey BAD_CHARACTER   = createTextAttributesKey("JACTL_BAD_CHARACTER", HighlighterColors.BAD_CHARACTER);
 
+  public static final TextAttributesKey LOCAL_VARIABLE  = createTextAttributesKey("JACTL_LOCAL_VARIABLE", JavaHighlightingColors.LOCAL_VARIABLE_ATTRIBUTES);
+  public static final TextAttributesKey PARAMETER       = createTextAttributesKey("JACTL_PARAMETER", JavaHighlightingColors.PARAMETER_ATTRIBUTES);
+  public static final TextAttributesKey FIELD           = createTextAttributesKey("JACTL_PARAMETER", JavaHighlightingColors.INSTANCE_FIELD_ATTRIBUTES);
+  public static final TextAttributesKey METHOD          = createTextAttributesKey("JACTL_METHOD", JavaHighlightingColors.METHOD_DECLARATION_ATTRIBUTES);
+  public static final TextAttributesKey FUNCTION        = createTextAttributesKey("JACTL_FUNCTION", JavaHighlightingColors.METHOD_DECLARATION_ATTRIBUTES);
+  public static final TextAttributesKey CLASS           = createTextAttributesKey("JACTL_CLASS", JavaHighlightingColors.CLASS_NAME_ATTRIBUTES);
+  public static final TextAttributesKey PACKAGE         = createTextAttributesKey("JACTL_PACKAGE", JavaHighlightingColors.CLASS_NAME_ATTRIBUTES);
 
-  private static final TextAttributesKey[] SEPARATOR_KEYS  = new TextAttributesKey[]{SEPARATOR};
-  private static final TextAttributesKey[] BAD_CHAR_KEYS   = new TextAttributesKey[]{BAD_CHARACTER};
-  private static final TextAttributesKey[] KEY_KEYS        = new TextAttributesKey[]{KEY};
-  private static final TextAttributesKey[] IDENTIFIER_KEYS = new TextAttributesKey[]{IDENTIFIER};
-  private static final TextAttributesKey[] NUMBER_KEYS     = new TextAttributesKey[]{NUMBER};
-  private static final TextAttributesKey[] STRING_KEYS     = new TextAttributesKey[]{STRING};
-  private static final TextAttributesKey[] COMMENT_KEYS    = new TextAttributesKey[]{COMMENT};
-  private static final TextAttributesKey[] TYPE_KEYS       = new TextAttributesKey[]{TYPE};
-  private static final TextAttributesKey[] EMPTY_KEYS      = new TextAttributesKey[0];
+  private static final TextAttributesKey[] SEMICOLON_KEYS   = new TextAttributesKey[]{SEMICOLON};
+  private static final TextAttributesKey[] COMMA_KEYS       = new TextAttributesKey[]{COMMA};
+  private static final TextAttributesKey[] DOT_KEYS         = new TextAttributesKey[]{DOT};
+  private static final TextAttributesKey[] BRACES_KEYS      = new TextAttributesKey[]{BRACES};
+  private static final TextAttributesKey[] BRACKETS_KEYS    = new TextAttributesKey[]{BRACKETS};
+  private static final TextAttributesKey[] PARENTHESES_KEYS = new TextAttributesKey[]{PARENTHESES};
+  private static final TextAttributesKey[] OPERATOR_KEYS    = new TextAttributesKey[]{OPERATOR};
+  private static final TextAttributesKey[] BAD_CHAR_KEYS    = new TextAttributesKey[]{BAD_CHARACTER};
+  private static final TextAttributesKey[] KEY_KEYS         = new TextAttributesKey[]{KEY};
+  private static final TextAttributesKey[] IDENTIFIER_KEYS  = new TextAttributesKey[]{IDENTIFIER};
+  private static final TextAttributesKey[] NUMBER_KEYS      = new TextAttributesKey[]{NUMBER};
+  private static final TextAttributesKey[] STRING_KEYS      = new TextAttributesKey[]{STRING};
+  private static final TextAttributesKey[] COMMENT_KEYS     = new TextAttributesKey[]{COMMENT};
+  private static final TextAttributesKey[] TYPE_KEYS        = new TextAttributesKey[]{TYPE};
+  private static final TextAttributesKey[] EMPTY_KEYS       = new TextAttributesKey[0];
 
   private Project project;
 
@@ -70,9 +89,7 @@ public class JactlSyntaxHighLighter extends SyntaxHighlighterBase {
 
   @Override
   public TextAttributesKey @NotNull [] getTokenHighlights(IElementType elementType) {
-
-    if (elementType instanceof JactlTokenType) {
-      JactlTokenType type = (JactlTokenType)elementType;
+    if (elementType instanceof JactlTokenType type) {
       return switch (type.tokenType) {
         case COMMENT           -> COMMENT_KEYS;
         case IDENTIFIER        -> IDENTIFIER_KEYS;
@@ -80,7 +97,16 @@ public class JactlSyntaxHighLighter extends SyntaxHighlighterBase {
         case STRING_CONST      -> STRING_KEYS;
         case EXPR_STRING_START -> STRING_KEYS;
         case EXPR_STRING_END   -> STRING_KEYS;
-        case SEMICOLON         -> SEPARATOR_KEYS;
+        case SEMICOLON         -> SEMICOLON_KEYS;
+        case COMMA             -> COMMA_KEYS;
+        case DOT,QUESTION_DOT  -> DOT_KEYS;
+        case LEFT_BRACE        -> BRACES_KEYS;
+        case RIGHT_BRACE       -> BRACES_KEYS;
+        case LEFT_SQUARE       -> BRACKETS_KEYS;
+        case QUESTION_SQUARE   -> BRACKETS_KEYS;
+        case RIGHT_SQUARE      -> BRACKETS_KEYS;
+        case LEFT_PAREN        -> PARENTHESES_KEYS;
+        case RIGHT_PAREN       -> PARENTHESES_KEYS;
         case DEF               -> TYPE_KEYS;
         case BYTE              -> TYPE_KEYS;
         case STRING            -> TYPE_KEYS;
@@ -89,9 +115,15 @@ public class JactlSyntaxHighLighter extends SyntaxHighlighterBase {
         case DECIMAL           -> TYPE_KEYS;
         case DOUBLE            -> TYPE_KEYS;
         case BOOLEAN           -> TYPE_KEYS;
+        case OBJECT            -> TYPE_KEYS;
+        case MAP               -> TYPE_KEYS;
+        case LIST              -> TYPE_KEYS;
         default -> {
           if (type.tokenType.asString != null && Tokeniser.isIdentifier(type.tokenType.asString)) {
             yield KEY_KEYS;
+          }
+          if (isOperator(type)) {
+            yield OPERATOR_KEYS;
           }
           yield type.tokenType.isNumber() ? NUMBER_KEYS : EMPTY_KEYS;
         }
@@ -103,4 +135,12 @@ public class JactlSyntaxHighLighter extends SyntaxHighlighterBase {
     return EMPTY_KEYS;
   }
 
+  private boolean isOperator(JactlTokenType jactlTokenType) {
+    var tokenType = jactlTokenType.tokenType;
+    return tokenType.isBitOperator() ||
+           tokenType.isBooleanOperator() ||
+           tokenType.isNumericOperator() ||
+           tokenType.isAssignmentLike() ||
+           tokenType.is(QUESTION,QUESTION_QUESTION,QUESTION_COLON);
+  }
 }

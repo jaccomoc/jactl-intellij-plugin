@@ -14,6 +14,7 @@ public class JactlNameElementType extends IElementType {
   public static JactlNameElementType METHOD     = new JactlNameElementType("METHOD");
   public static JactlNameElementType PARAMETER  = new JactlNameElementType("PARAMETER");
   public static JactlNameElementType VARIABLE   = new JactlNameElementType("VARIABLE");
+  public static JactlNameElementType FIELD      = new JactlNameElementType("FIELD");
 
   public JactlNameElementType(String name) {
     super(name, JactlLanguage.INSTANCE);
@@ -27,6 +28,7 @@ public class JactlNameElementType extends IElementType {
       case FUNCTION  -> FUNCTION;
       case METHOD    -> METHOD;
       case VARIABLE  -> VARIABLE;
+      case FIELD     -> FIELD;
       case PARAMETER -> PARAMETER;
     };
   }
@@ -38,6 +40,7 @@ public class JactlNameElementType extends IElementType {
     if (type == FUNCTION)   return JactlName.NameType.FUNCTION;
     if (type == METHOD)     return JactlName.NameType.METHOD;
     if (type == VARIABLE)   return JactlName.NameType.VARIABLE;
+    if (type == FIELD)      return JactlName.NameType.FIELD;
     if (type == PARAMETER)  return JactlName.NameType.PARAMETER;
     throw new IllegalStateException("Unknown type " + type);
   }

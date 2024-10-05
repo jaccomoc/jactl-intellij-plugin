@@ -13,7 +13,6 @@ import io.jactl.intellijplugin.JactlUtils;
 import io.jactl.intellijplugin.psi.AbstractJactlPsiStmt;
 import io.jactl.intellijplugin.psi.JactlNameElementType;
 import io.jactl.intellijplugin.psi.JactlPsiElement;
-import io.jactl.intellijplugin.psi.JactlStmtElementType;
 import io.jactl.intellijplugin.psi.interfaces.JactlPsiName;
 import io.jactl.runtime.ClassDescriptor;
 import org.jetbrains.annotations.NotNull;
@@ -116,7 +115,7 @@ public class JactlPsiNameImpl extends AbstractJactlPsiStmt implements JactlPsiNa
     // If we are being deleted we need to delete the actual class/function/method/field instead
     switch (JactlNameElementType.getNameType(type)) {
       case FILE,PACKAGE -> throw new IncorrectOperationException("Invalid operation for " + type);
-      case CLASS,FUNCTION,METHOD,VARIABLE,PARAMETER -> getParent().delete();
+      case CLASS,FUNCTION,METHOD,VARIABLE,FIELD,PARAMETER -> getParent().delete();
     }
   }
 }

@@ -26,9 +26,9 @@
   <!-- Extension points defined by the plugin.
        Read more: https://plugins.jetbrains.com/docs/intellij/plugin-extension-points.html -->
   <extensions defaultExtensionNs="com.intellij">
-    <fileType name="Jactl File" implementationClass="io.jactl.intellijplugin.JactlFileType" fieldName="INSTANCE" language="Jactl" extensions="jactl"/>
-    <colorSettingsPage          implementation="io.jactl.intellijplugin.extensions.JactlColorSettingsPage"/>
+    <fileType name="Jactl File"    implementationClass="io.jactl.intellijplugin.JactlFileType" fieldName="INSTANCE" language="Jactl" extensions="jactl"/>
     <lang.parserDefinition         language="Jactl" implementationClass="io.jactl.intellijplugin.JactlParserDefinition"/>
+    <colorSettingsPage             implementation="io.jactl.intellijplugin.extensions.JactlColorSettingsPage"/>
     <lang.syntaxHighlighterFactory language="Jactl" implementationClass="io.jactl.intellijplugin.extensions.JactlSyntaxHighLighterFactory"/>
     <annotator                     language="Jactl" implementationClass="io.jactl.intellijplugin.extensions.JactlHighlightAnnotator" />
     <completion.contributor        language="Jactl" implementationClass="io.jactl.intellijplugin.extensions.JactlCompletionContributor" />

@@ -369,7 +369,7 @@ public class JactlUtils {
       case PACKAGE -> throw new IncorrectOperationException("Package rename not supported");
       case CLASS -> "class " + name + "{}";
       case FUNCTION, METHOD -> "def " + name + "(){}";
-      case VARIABLE, PARAMETER -> "def " + name;
+      case VARIABLE, FIELD, PARAMETER -> "def " + name;
     };
   }
   public static PsiElement newReferenceElement(Project project, JactlNameElementType type, String name, Class<? extends JactlPsiElement> clss) {
@@ -402,7 +402,7 @@ public class JactlUtils {
       case PACKAGE -> "package " + name;
       case CLASS -> name + " xxx";
       case FUNCTION, METHOD -> name + "()";
-      case VARIABLE, PARAMETER -> name;
+      case VARIABLE, FIELD, PARAMETER -> name;
     };
   }
 

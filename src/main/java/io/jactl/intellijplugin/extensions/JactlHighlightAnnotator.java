@@ -20,12 +20,16 @@ package io.jactl.intellijplugin.extensions;
 import com.intellij.lang.annotation.AnnotationHolder;
 import com.intellij.lang.annotation.Annotator;
 import com.intellij.lang.annotation.HighlightSeverity;
+import com.intellij.openapi.editor.colors.TextAttributesKey;
 import com.intellij.psi.PsiElement;
+import com.intellij.psi.PsiReference;
+import com.intellij.psi.tree.IElementType;
 import io.jactl.intellijplugin.JactlParserAdapter;
 import io.jactl.intellijplugin.JactlUtils;
 import io.jactl.intellijplugin.psi.*;
 import io.jactl.intellijplugin.psi.impl.JactlPsiIdentifierImpl;
 import io.jactl.intellijplugin.psi.impl.JactlPsiTypeImpl;
+import io.jactl.intellijplugin.psi.interfaces.JactlPsiIdentifier;
 import io.jactl.intellijplugin.psi.interfaces.JactlPsiName;
 import org.jetbrains.annotations.NotNull;
 
@@ -45,35 +49,24 @@ public class JactlHighlightAnnotator implements Annotator {
                         .forEach(error);
     }
 
-    if (element instanceof JactlPsiIdentifierImpl ident) {
-      var parent = element.getParent();
-      if (parent instanceof JactlPsiName) {
-        if (parent.getNode().getElementType() == JactlNameElementType.PACKAGE) {
-          List<String> idents = new ArrayList<>();
-          for (PsiElement e = parent.getFirstChild(); e != element; e = e.getNextSibling()) {
-            if (e instanceof JactlPsiIdentifierImpl) {
-              idents.add(e.getText());
-            }
-          }
-          idents.add(element.getText());
-          String packageName = String.join(".", idents);
-          Set<String> pkgNames = JactlUtils.pkgNames(element.getProject());
-          if (!pkgNames.contains(packageName)) {
-            error.accept("Unknown package");
-            return;
-          }
+    if (element instanceof JactlPsiIdentifierImpl &&
+        element.getParent() instanceof JactlPsiName parent &&
+        JactlUtils.isElementType(parent, JactlNameElementType.PACKAGE)) {
+      List<String> idents = new ArrayList<>();
+      for (PsiElement e = parent.getFirstChild(); e != element; e = e.getNextSibling()) {
+        if (e instanceof JactlPsiIdentifierImpl) {
+          idents.add(e.getText());
         }
-        boolean isFunc = parent.getNode().getElementType() == JactlStmtElementType.FUN_DECL;
-        holder.newSilentAnnotation(HighlightSeverity.INFORMATION)
-              .range(element.getTextRange())
-              .textAttributes(isFunc ? JactlSyntaxHighLighter.FUNCTION_DECLARATION : JactlSyntaxHighLighter.VARIABLE_DECLARATION)
-              .create();
       }
-//      else if (expectVariableRef(element) && (ident.getReference() == null || ident.getReference().resolve() == null)) {
-//        error.accept("Undeclared variable");
-//      }
+      idents.add(element.getText());
+      String packageName = String.join(".", idents);
+      Set<String> pkgNames = JactlUtils.pkgNames(element.getProject());
+      if (!pkgNames.contains(packageName)) {
+        error.accept("Unknown package");
+        return;
+      }
     }
-    else if (element instanceof JactlPsiName && element.getNode().getElementType() == JactlNameElementType.PACKAGE) {
+    else if (element instanceof JactlPsiName && JactlUtils.isElementType(element, JactlNameElementType.PACKAGE)) {
       List<String> idents = new ArrayList<>();
       for (PsiElement e = element.getFirstChild(); e != null; e = e.getNextSibling()) {
         if (e instanceof JactlPsiIdentifierImpl) {
@@ -97,25 +90,47 @@ public class JactlHighlightAnnotator implements Annotator {
     else if (element instanceof JactlPsiTypeImpl type) {
       if (!type.isBuiltIn() && type.findClassDefinition() == null) {
         error.accept("Unknown type " + type.getText());
+        return;
       }
       else {
         holder.newSilentAnnotation(HighlightSeverity.INFORMATION)
               .range(element.getTextRange())
               .textAttributes(JactlSyntaxHighLighter.TYPE)
               .create();
+        return;
+      }
+    }
+
+    // Annotate based on type of identifier
+    if (JactlUtils.isElementType(element, JactlTokenTypes.IDENTIFIER)) {
+      var          parent     = element.getParent();
+      IElementType parentType = parent.getNode().getElementType();
+      if (!(parentType instanceof JactlNameElementType)) {
+        PsiReference reference = element.getReference();
+        var          resolved  = reference != null ? reference.resolve() : null;
+        if (resolved == null) {
+          return;
+        }
+        parentType = resolved.getNode().getElementType();
+      }
+      if (parentType instanceof JactlNameElementType parentNameType) {
+        TextAttributesKey textType = switch (JactlNameElementType.getNameType(parentNameType)) {
+          case PACKAGE   -> JactlSyntaxHighLighter.PACKAGE;
+          case CLASS     -> JactlSyntaxHighLighter.CLASS;
+          case FUNCTION  -> JactlSyntaxHighLighter.FUNCTION;
+          case METHOD    -> JactlSyntaxHighLighter.METHOD;
+          case VARIABLE  -> JactlSyntaxHighLighter.LOCAL_VARIABLE;
+          case FIELD     -> JactlSyntaxHighLighter.FIELD;
+          case PARAMETER -> JactlSyntaxHighLighter.PARAMETER;
+          default        -> null;
+        };
+        if (textType != null) {
+          holder.newSilentAnnotation(HighlightSeverity.INFORMATION)
+                .range(element.getTextRange())
+                .textAttributes(textType)
+                .create();
+        }
       }
     }
   }
-
-  private boolean expectVariableRef(PsiElement element) {
-    var parent = element.getParent();
-    if (parent instanceof JactlPsiTypeImpl) {
-      return false;
-    }
-    if (parent.getNode().getElementType() == JactlExprElementType.CLASS_PATH_EXPR) {
-      return false;
-    }
-    return true;
-  }
-
 }
