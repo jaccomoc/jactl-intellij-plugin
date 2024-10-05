@@ -53,7 +53,7 @@ public class JactlSyntaxHighLighter extends SyntaxHighlighterBase {
 
   public static final TextAttributesKey LOCAL_VARIABLE  = createTextAttributesKey("JACTL_LOCAL_VARIABLE", JavaHighlightingColors.LOCAL_VARIABLE_ATTRIBUTES);
   public static final TextAttributesKey PARAMETER       = createTextAttributesKey("JACTL_PARAMETER", JavaHighlightingColors.PARAMETER_ATTRIBUTES);
-  public static final TextAttributesKey FIELD           = createTextAttributesKey("JACTL_PARAMETER", JavaHighlightingColors.INSTANCE_FIELD_ATTRIBUTES);
+  public static final TextAttributesKey FIELD           = createTextAttributesKey("JACTL_FIELD", JavaHighlightingColors.INSTANCE_FIELD_ATTRIBUTES);
   public static final TextAttributesKey METHOD          = createTextAttributesKey("JACTL_METHOD", JavaHighlightingColors.METHOD_DECLARATION_ATTRIBUTES);
   public static final TextAttributesKey FUNCTION        = createTextAttributesKey("JACTL_FUNCTION", JavaHighlightingColors.METHOD_DECLARATION_ATTRIBUTES);
   public static final TextAttributesKey CLASS           = createTextAttributesKey("JACTL_CLASS", JavaHighlightingColors.CLASS_NAME_ATTRIBUTES);
