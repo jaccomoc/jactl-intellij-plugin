@@ -108,7 +108,7 @@ public class JactlHighlightAnnotator implements Annotator {
       if (!(parentType instanceof JactlNameElementType)) {
         PsiReference reference = element.getReference();
         var          resolved  = reference != null ? reference.resolve() : null;
-        if (resolved == null) {
+        if (resolved == null || resolved.getNode() == null) {
           return;
         }
         parentType = resolved.getNode().getElementType();

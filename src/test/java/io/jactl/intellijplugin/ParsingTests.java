@@ -1,17 +1,28 @@
 package io.jactl.intellijplugin;
 
+import com.intellij.psi.PsiFile;
 import com.intellij.psi.impl.DebugUtil;
 import com.intellij.testFramework.fixtures.BasePlatformTestCase;
 
 public class ParsingTests extends BasePlatformTestCase {
+
+  private PsiFile psiFile;
+
   @Override
   protected String getTestDataPath() {
     return "src/test";
   }
 
+  private void configureWith(String text) {
+    psiFile = myFixture.configureByText("script.jactl", "def f() {\n}\n");
+  }
+
+  private String getPsiTree() {
+    return DebugUtil.psiToString(psiFile, true).replaceAll("0x[0-9a-f]*","");
+  }
+
   public void testSimple() {
-    var psiFile = myFixture.configureByText("script.jactl", "def f() {\n}\n");
-    String actual = DebugUtil.psiToString(psiFile, true).replaceAll("0x[0-9a-f]*","");
+    configureWith("def f() {\n}\n");
     assertEquals("Jactl File[]\n" +
                  "  JactlPsiDeclarationStmtImpl(FUN_DECL)\n" +
                  "    JactlPsiTypeImpl(BUILT_IN_TYPE)\n" +
@@ -28,21 +39,13 @@ public class ParsingTests extends BasePlatformTestCase {
                  "      PsiWhiteSpace('\\n')\n" +
                  "      PsiElement(JactlTokenType.RIGHT_BRACE)('}')\n" +
                  "  PsiWhiteSpace('\\n')\n",
-                 actual);
+                 getPsiTree());
   }
 
-  public void testBadRegex() {
-    myFixture.configureByText("script.jactl","/x/inQ");
-  }
-
-  public void testGoodRegex() {
-    myFixture.configureByText("script.jactl","/x/i");
-  }
-
-  public void testDoUntil() {
-    String text = "do{}until(true)";
-    myFixture.configureByText("script.jactl", text);
-  }
+  public void testBadRegex()             { configureWith("/x/inQ"); }
+  public void testGoodRegex()            { configureWith("/x/i"); }
+  public void testDoUntil()              { configureWith("do{}until(true)"); }
+  public void testBackslashEOFInString() { configureWith("def a = \"{\\"); }
 
   public static final String ALL_SYMBOL_EXAMPLE =
     """
