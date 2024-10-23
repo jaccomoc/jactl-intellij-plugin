@@ -230,7 +230,7 @@ public class JactlTokenBuilder extends BuilderImpl {
         drop();
         return;
       }
-      type = stmt.accept(new Stmt.Visitor<>() {
+      type = stmt.accept(new Stmt.Visitor<IElementType>() {
         @Override public IElementType visitIf(Stmt.If anIf)                       { return JactlStmtElementType.IF_STMT; }
         @Override public IElementType visitClassDecl(Stmt.ClassDecl classDecl)    { return JactlStmtElementType.CLASS_DECL; }
         @Override public IElementType visitImport(Stmt.Import anImport)           { return JactlStmtElementType.IMPORT_STMT; }
@@ -242,11 +242,11 @@ public class JactlTokenBuilder extends BuilderImpl {
         @Override public IElementType visitThrowError(Stmt.ThrowError throwError) { throw new IllegalStateException("ThrowError only for internal use"); }
         @Override public IElementType visitStmts(Stmt.Stmts stmts)                { return stmts.isSingleStmt ? JactlStmtElementType.VAR_DECL : JactlStmtElementType.BLOCK; }
         @Override public IElementType visitBlock(Stmt.Block block) {
-          return switch (block.location.getType()) {
-            case FOR -> JactlStmtElementType.FOR_STMT;
-            case DO  -> JactlStmtElementType.DO_UNTIL_STMT;
-            default  -> JactlStmtElementType.BLOCK;
-          };
+          switch (block.location.getType()) {
+            case FOR: return JactlStmtElementType.FOR_STMT;
+            case DO:  return JactlStmtElementType.DO_UNTIL_STMT;
+            default:  return JactlStmtElementType.BLOCK;
+          }
         }
       });
       if (type == null) {
@@ -264,7 +264,7 @@ public class JactlTokenBuilder extends BuilderImpl {
         drop();
         return;
       }
-      type = expr.accept(new Expr.Visitor<>() {
+      type = expr.accept(new Expr.Visitor<IElementType>() {
         @Override public IElementType visitBinary(Expr.Binary binary)                          { return JactlExprElementType.BINARY_EXPR; }
         @Override public IElementType visitRegexMatch(Expr.RegexMatch regexMatch)              { return JactlExprElementType.REGEX_MATCH; }
         @Override public IElementType visitRegexSubst(Expr.RegexSubst regexSubst)              { return JactlExprElementType.REGEX_SUBST; }

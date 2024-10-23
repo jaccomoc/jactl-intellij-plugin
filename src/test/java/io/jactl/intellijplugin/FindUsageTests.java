@@ -2,6 +2,9 @@ package io.jactl.intellijplugin;
 
 import com.intellij.codeInsight.TargetElementUtil;
 import com.intellij.find.FindManager;
+import com.intellij.find.findUsages.FindUsagesHandler;
+import com.intellij.find.findUsages.FindUsagesManager;
+import com.intellij.find.findUsages.FindUsagesOptions;
 import com.intellij.find.impl.FindManagerImpl;
 import com.intellij.psi.PsiElement;
 import com.intellij.testFramework.fixtures.BasePlatformTestCase;
@@ -25,11 +28,11 @@ public class FindUsageTests extends BasePlatformTestCase {
     final PsiElement resolved = TargetElementUtil.findTargetElement(myFixture.getEditor(),
                                                                     TargetElementUtil.getInstance().getReferenceSearchFlags());
     assertNotNull("Could not resolve reference", resolved);
-    var findUsagesManager = ((FindManagerImpl) FindManager.getInstance(getProject())).getFindUsagesManager();
-    var handler           = findUsagesManager.getFindUsagesHandler(resolved, false);
+    FindUsagesManager findUsagesManager = ((FindManagerImpl) FindManager.getInstance(getProject())).getFindUsagesManager();
+    FindUsagesHandler handler           = findUsagesManager.getFindUsagesHandler(resolved, false);
     assertNotNull(handler);
-    var options   = handler.getFindUsagesOptions();
-    var processor = new CommonProcessors.CollectProcessor<UsageInfo>();
+    FindUsagesOptions                            options   = handler.getFindUsagesOptions();
+    CommonProcessors.CollectProcessor<UsageInfo> processor = new CommonProcessors.CollectProcessor<UsageInfo>();
     for (PsiElement element : handler.getPrimaryElements()) {
       handler.processElementUsages(element, processor, options);
     }

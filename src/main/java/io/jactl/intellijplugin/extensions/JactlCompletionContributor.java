@@ -64,11 +64,11 @@ public class JactlCompletionContributor extends CompletionContributor {
                                                        .toList();
 
   public JactlCompletionContributor() {
-    var globalFunctionNames = Functions.getGlobalFunctionNames()
-                                       .stream()
-                                       .map(Functions::getGlobalFunDecl)
-                                       .map(JactlCompletionContributor::createFunctionLookup)
-                                       .toList();
+    List<LookupElementBuilder> globalFunctionNames = Functions.getGlobalFunctionNames()
+                                                              .stream()
+                                                              .map(Functions::getGlobalFunDecl)
+                                                              .map(JactlCompletionContributor::createFunctionLookup)
+                                                              .toList();
 
     // We have an identifier in an expression not immediately after a '.' or '?.'
     // Add all visible variables/fields, functions/methods, global functions, and any class static functions we can find.
@@ -83,9 +83,9 @@ public class JactlCompletionContributor extends CompletionContributor {
              protected void addCompletions(@NotNull CompletionParameters parameters, @NotNull ProcessingContext context, @NotNull CompletionResultSet result) {
                JactlPsiElement element          = (JactlPsiElement) parameters.getPosition();
                JactlPsiElement parent           = (JactlPsiElement) element.getParent();
-               JactlPsiElement grandParent      = (JactlPsiElement) parent.getParent();
-               var             classDescriptors = JactlParserAdapter.getClasses(parent.getFile(), parent.getSourceCode(), grandParent.getAstKey());
-               var             owningClass      = JactlParserAdapter.getClass(parent.getFile(), parent.getSourceCode(), parent.getAstKey());
+               JactlPsiElement       grandParent      = (JactlPsiElement) parent.getParent();
+               List<ClassDescriptor> classDescriptors = JactlParserAdapter.getClasses(parent.getFile(), parent.getSourceCode(), grandParent.getAstKey());
+               ClassDescriptor       owningClass      = JactlParserAdapter.getClass(parent.getFile(), parent.getSourceCode(), parent.getAstKey());
                List<ClassDescriptor> baseClasses = owningClass == null ? List.of()
                                                                        : Stream.concat(Stream.of(owningClass), JactlUtils.stream(owningClass, ClassDescriptor::getBaseClass)).toList();
                Runnable addTypes = () -> {
@@ -100,7 +100,7 @@ public class JactlCompletionContributor extends CompletionContributor {
                    firstChild == parent &&
                    JactlUtils.getNextSibling(parent, JactlTokenTypes.IDENTIFIER) == null) {
                  addTypes.run();
-                 var        classDecl        = JactlUtils.getAncestor(grandParent, JactlStmtElementType.CLASS_DECL);
+                 PsiElement classDecl        = JactlUtils.getAncestor(grandParent, JactlStmtElementType.CLASS_DECL);
                  PsiElement greatGrandParent = grandParent.getParent();
                  if (classDecl != null && greatGrandParent.getParent() == classDecl) {
                    // We are at field/method level of a class declaration so add "static" and "const" and
@@ -116,7 +116,7 @@ public class JactlCompletionContributor extends CompletionContributor {
                    // then also add statement-beginning keywords since we are at the start of a statement.
                    result.addAllElements(beginningKeywords);
                    // If top level of script add "class" to completion list
-                   var type = greatGrandParent.getNode().getElementType();
+                   IElementType type = greatGrandParent.getNode().getElementType();
                    if (type == JactlNameElementType.JACTL_FILE || type instanceof IFileElementType) {
                      result.addElement(LookupElementBuilder.create(TokenType.CLASS.asString));
                      // If first element in script then allow 'package' in completions
@@ -219,12 +219,12 @@ public class JactlCompletionContributor extends CompletionContributor {
     // Class path like a.b.c.X: add classes and packages
     extend(CompletionType.BASIC, PlatformPatterns.psiElement(JactlTokenTypes.IDENTIFIER)
                                                  .withParent(PlatformPatterns.psiElement(JactlExprElementType.CLASS_PATH_EXPR)),
-           new CompletionProvider<>() {
+           new CompletionProvider<CompletionParameters>() {
              @Override protected void addCompletions(@NotNull CompletionParameters parameters, @NotNull ProcessingContext context, @NotNull CompletionResultSet result) {
                JactlPsiElement element = (JactlPsiElement)parameters.getPosition();
                // Build package path for preceding nodes
                StringBuilder pathBuilder = new StringBuilder();
-               for (var child = element.getParent().getFirstChild(); child != element; child = child.getNextSibling()) {
+               for (PsiElement child = element.getParent().getFirstChild(); child != element; child = child.getNextSibling()) {
                  pathBuilder.append(child.getText());
                }
                String path = JactlPlugin.removeSuffix(pathBuilder.toString());
@@ -241,7 +241,7 @@ public class JactlCompletionContributor extends CompletionContributor {
     // Type after "const": we only support simple types for consts (boolean, byte, int, long, double, Decimal, String)
     extend(CompletionType.BASIC, PlatformPatterns.psiElement(JactlTokenTypes.IDENTIFIER)
                                                  .afterLeaf(TokenType.CONST.asString),
-           new CompletionProvider<>() {
+           new CompletionProvider<CompletionParameters>() {
              @Override protected void addCompletions(@NotNull CompletionParameters parameters, @NotNull ProcessingContext context, @NotNull CompletionResultSet result) {
                result.addAllElements(Stream.of(JactlUtils.SIMPLE_TYPES)
                                            .map(type -> LookupElementBuilder.create(type).withIcon(AllIcons.Nodes.Type))
@@ -259,13 +259,15 @@ public class JactlCompletionContributor extends CompletionContributor {
            new CompletionProvider<CompletionParameters>() {
              @Override
              protected void addCompletions(@NotNull CompletionParameters parameters, @NotNull ProcessingContext context, @NotNull CompletionResultSet result) {
-               var element = (JactlPsiElement)parameters.getPosition();
-               var lhs     = element.getParent().getParent();
-               if (lhs instanceof JactlPsiExpr expr) {
-                 var jactlNode = expr.getJactlAstNode();
-                 if (jactlNode instanceof Expr.Binary jactlExpr && jactlExpr.left.type != null) {
-                   JactlType type = jactlExpr.left.type;
-                   var classDescriptor = type.getClassDescriptor();
+               JactlPsiElement element = (JactlPsiElement)parameters.getPosition();
+               PsiElement      lhs     = element.getParent().getParent();
+               if (lhs instanceof JactlPsiExpr) {
+                 JactlPsiExpr        expr      = (JactlPsiExpr) lhs;
+                 JactlUserDataHolder jactlNode = expr.getJactlAstNode();
+                 if (jactlNode instanceof Expr.Binary && ((Expr.Binary) jactlNode).left.type != null) {
+                   Expr.Binary     jactlExpr       = (Expr.Binary) jactlNode;
+                   JactlType       type            = jactlExpr.left.type;
+                   ClassDescriptor classDescriptor = type.getClassDescriptor();
                    if (type.is(JactlType.INSTANCE, JactlType.CLASS) && type.getClassDescriptor() != null) {
                      // Add methods if instance or static if class
                      result.addAllElements(classDescriptor.getAllMethods()
@@ -291,15 +293,16 @@ public class JactlCompletionContributor extends CompletionContributor {
                    }
                    // Add any builtin methods based on type or on last assigned type if we have a variable
                    if (!type.is(JactlType.CLASS)) {
-                     var builtinMethods = Functions.getAllMethods(type);
+                     List<FunctionDescriptor> builtinMethods = Functions.getAllMethods(type);
                      result.addAllElements(builtinMethods.stream()
                                                          .map(JactlCompletionContributor::createFunctionLookup)
                                                          .toList());
                      // Add any additional methods based on last type assigned to variable
-                     if (jactlExpr.left instanceof Expr.Identifier identifier) {
-                       JactlType lastAssignedType = identifier.varDecl != null ? identifier.varDecl.lastAssignedType : null;
+                     if (jactlExpr.left instanceof Expr.Identifier) {
+                       Expr.Identifier identifier       = (Expr.Identifier) jactlExpr.left;
+                       JactlType       lastAssignedType = identifier.varDecl != null ? identifier.varDecl.lastAssignedType : null;
                        if (lastAssignedType != null && !type.equals(lastAssignedType)){
-                         var newMethods = Functions.getAllMethods(lastAssignedType).stream().filter(f -> builtinMethods.stream().noneMatch(b -> b.name.equals(f.name))).toList();
+                         List<FunctionDescriptor> newMethods = Functions.getAllMethods(lastAssignedType).stream().filter(f -> builtinMethods.stream().noneMatch(b -> b.name.equals(f.name))).toList();
                          result.addAllElements(newMethods.stream().map(JactlCompletionContributor::createFunctionLookup).toList());
                        }
                      }
@@ -313,7 +316,7 @@ public class JactlCompletionContributor extends CompletionContributor {
     // Import statements: first identifier
     extend(CompletionType.BASIC, PlatformPatterns.psiElement(JactlTokenTypes.IDENTIFIER)
                                                  .withParent(PlatformPatterns.psiElement(JactlStmtElementType.IMPORT_STMT)),
-           new CompletionProvider<>() {
+           new CompletionProvider<CompletionParameters>() {
              @Override
              protected void addCompletions(@NotNull CompletionParameters parameters, @NotNull ProcessingContext context, @NotNull CompletionResultSet result) {
                JactlPsiElement element = (JactlPsiElement) parameters.getPosition();
@@ -334,7 +337,7 @@ public class JactlCompletionContributor extends CompletionContributor {
     extend(CompletionType.BASIC, PlatformPatterns.psiElement(JactlTokenTypes.IDENTIFIER)
                                                  .withParent(JactlPsiIdentifierExprImpl.class)
                                                  .withSuperParent(2, PlatformPatterns.psiElement(JactlStmtElementType.IMPORT_STMT)),
-           new CompletionProvider<>() {
+           new CompletionProvider<CompletionParameters>() {
              @Override protected void addCompletions(@NotNull CompletionParameters parameters, @NotNull ProcessingContext context, @NotNull CompletionResultSet result) {
                JactlPsiElement element = (JactlPsiElement)parameters.getPosition();
                JactlPsiElement importStmt = (JactlPsiElement)element.getParent().getParent();
@@ -346,7 +349,7 @@ public class JactlCompletionContributor extends CompletionContributor {
                  }
                }
                // Check for ClassPath
-               var classPathElement = (JactlPsiElement) JactlUtils.getFirstChild(importStmt, JactlExprElementType.CLASS_PATH_EXPR);
+               JactlPsiElement classPathElement = (JactlPsiElement) JactlUtils.getFirstChild(importStmt, JactlExprElementType.CLASS_PATH_EXPR);
                if (classPathElement == null) {
                  String packageName = String.join(".'", path);
                  if (JactlUtils.pkgNames(element.getProject()).contains(packageName)) {
@@ -358,8 +361,8 @@ public class JactlCompletionContributor extends CompletionContributor {
                  }
                }
                else {
-                 var astNode = (Expr.ClassPath)classPathElement.getJactlAstNode();
-                 String parentClass = astNode.fullClassName();
+                 Expr.ClassPath astNode     = (Expr.ClassPath)classPathElement.getJactlAstNode();
+                 String         parentClass = astNode.fullClassName();
                  Stmt.ClassDecl classDecl = JactlParserAdapter.getClassDecl(element.getProject(), parentClass);
                  // Find the inner class we are at based on current path
                  for (String next: path) {
@@ -393,7 +396,7 @@ public class JactlCompletionContributor extends CompletionContributor {
     // Package statement
     extend(CompletionType.BASIC, PlatformPatterns.psiElement(JactlTokenTypes.IDENTIFIER)
                                                  .withParent(PlatformPatterns.psiElement(JactlNameElementType.PACKAGE)),
-           new CompletionProvider<>() {
+           new CompletionProvider<CompletionParameters>() {
              @Override protected void addCompletions(@NotNull CompletionParameters parameters, @NotNull ProcessingContext context, @NotNull CompletionResultSet result) {
                JactlPsiElement element = (JactlPsiElement)parameters.getPosition();
                // Build package path for preceding nodes
@@ -436,7 +439,8 @@ public class JactlCompletionContributor extends CompletionContributor {
   }
 
   private static LookupElementBuilder createLookup(Object obj, boolean addParentheses) {
-    if (obj instanceof Expr.VarDecl varDecl) {
+    if (obj instanceof Expr.VarDecl) {
+      Expr.VarDecl varDecl = (Expr.VarDecl) obj;
       if (varDecl.funDecl != null) {
         return createFunctionLookup(varDecl, addParentheses);
       }
@@ -445,18 +449,21 @@ public class JactlCompletionContributor extends CompletionContributor {
                                  .withIcon(AllIcons.Nodes.Variable);
     }
 
-    if (obj instanceof JactlParserAdapter.FieldDescriptor field) {
+    if (obj instanceof JactlParserAdapter.FieldDescriptor) {
+      JactlParserAdapter.FieldDescriptor field = (JactlParserAdapter.FieldDescriptor) obj;
       return LookupElementBuilder.create(field.name())
                                  .withTypeText(field.type().toString())
                                  .withIcon(AllIcons.Nodes.Variable);
     }
 
-    if (obj instanceof FunctionDescriptor funcDesc) {
+    if (obj instanceof FunctionDescriptor) {
+      FunctionDescriptor funcDesc = (FunctionDescriptor) obj;
       return createFunctionLookup(funcDesc);
     }
 
     // Must be a class
-    if (obj instanceof ClassDescriptor descriptor) {
+    if (obj instanceof ClassDescriptor) {
+      ClassDescriptor descriptor = (ClassDescriptor) obj;
       return LookupElementBuilder.create(descriptor.getClassName())
                                  .withTypeText(descriptor.getPackageName())
                                  .withIcon(AllIcons.Nodes.Class);
@@ -471,10 +478,10 @@ public class JactlCompletionContributor extends CompletionContributor {
   }
 
   private static LookupElementBuilder createFunctionLookup(Expr.VarDecl f, boolean addParentheses) {
-    var lookup = LookupElementBuilder.create(f.name.getStringValue())
-                                     .appendTailText(JactlUtils.getParameterText(f.funDecl), true)
-                                     .withTypeText(f.funDecl.returnType.toString())
-                                     .withIcon(AllIcons.Nodes.Function);
+    LookupElementBuilder lookup = LookupElementBuilder.create(f.name.getStringValue())
+                                                      .appendTailText(JactlUtils.getParameterText(f.funDecl), true)
+                                                      .withTypeText(f.funDecl.returnType.toString())
+                                                      .withIcon(AllIcons.Nodes.Function);
     if (addParentheses) {
       lookup = lookup.withInsertHandler((context, item) -> {
         context.getDocument().insertString(context.getTailOffset(), hasMandatoryParams(f) ? "(" : "()");
@@ -486,7 +493,7 @@ public class JactlCompletionContributor extends CompletionContributor {
   }
 
   private static boolean hasMandatoryParams(Expr.VarDecl f) {
-    return f.funDecl.parameters.stream().anyMatch(p -> p.declExpr.initialiser instanceof Expr.Noop noop && noop.originalExpr == null);
+    return f.funDecl.parameters.stream().anyMatch(p -> p.declExpr.initialiser instanceof Expr.Noop && ((Expr.Noop) p.declExpr.initialiser).originalExpr == null);
   }
 
   private static LookupElementBuilder createFunctionLookup(FunctionDescriptor f) {
@@ -523,10 +530,12 @@ public class JactlCompletionContributor extends CompletionContributor {
   }
 
   private static JactlType getType(JactlUserDataHolder node) {
-    if (node instanceof JactlType type) {
+    if (node instanceof JactlType) {
+      JactlType type = (JactlType) node;
       return type;
     }
-    if (node instanceof Expr expr) {
+    if (node instanceof Expr) {
+      Expr expr = (Expr) node;
       return expr.type;
     }
     return null;

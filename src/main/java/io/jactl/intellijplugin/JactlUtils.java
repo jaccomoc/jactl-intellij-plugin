@@ -134,9 +134,9 @@ public class JactlUtils {
   public static JactlPsiElement getGlobal(String name, Project project) {
     String globalsScript = JactlConfiguration.getInstance(project).getGlobalVariablesScript();
     if (globalsScript != null && !globalsScript.trim().isEmpty()) {
-      var globalsFile = VfsUtil.findFile(Path.of(FileUtil.toSystemDependentName(globalsScript.trim())),true);
+      VirtualFile globalsFile = VfsUtil.findFile(Path.of(FileUtil.toSystemDependentName(globalsScript.trim())), true);
       if (globalsFile != null) {
-        var psiGlobals = PsiManager.getInstance(project).findFile(globalsFile);
+        PsiFile psiGlobals = PsiManager.getInstance(project).findFile(globalsFile);
         return (JactlPsiElement)getFirstDescendant(psiGlobals, element -> true);
 //        if (psiGlobals != null) {
 //          return (JactlPsiElement)getFirstDescendant(psiGlobals, element -> isElementType(element, JactlTokenTypes.IDENTIFIER) && element.getText().equals(name));
@@ -147,7 +147,7 @@ public class JactlUtils {
   }
 
   public static JactlPsiElement getNameElementForPsiElementInTree(JactlAstKey key) {
-    var element = getPsiElementInTree(key);
+    JactlPsiElement element = getPsiElementInTree(key);
     if (element == null || element instanceof JactlPsiName) {
       return element;
     }
@@ -175,24 +175,28 @@ public class JactlUtils {
   }
 
   public static String getDocumentation(PsiElement element, String defaultText) {
-    if (element instanceof JactlFile file && JactlUtils.isGlobalsFile(file)) {
+    if (element instanceof JactlFile && JactlUtils.isGlobalsFile((JactlFile) element)) {
+      JactlFile file = (JactlFile) element;
       return "Global variable";
     }
-    if (element instanceof JactlPsiElement jactlPsiElement) {
-      JactlUserDataHolder astNode = jactlPsiElement.getJactlAstNode();
+    if (element instanceof JactlPsiElement) {
+      JactlPsiElement     jactlPsiElement = (JactlPsiElement) element;
+      JactlUserDataHolder astNode         = jactlPsiElement.getJactlAstNode();
       if (astNode == null) {
         return defaultText;
       }
-      if (astNode instanceof Stmt.VarDecl varDeclStmt) {
-        StringBuilder sb      = new StringBuilder();
-        var           varDecl = varDeclStmt.declExpr;
+      if (astNode instanceof Stmt.VarDecl) {
+        Stmt.VarDecl  varDeclStmt = (Stmt.VarDecl) astNode;
+        StringBuilder sb          = new StringBuilder();
+        Expr.VarDecl  varDecl     = varDeclStmt.declExpr;
         if (varDecl.isConstVar) {
           sb.append("const ");
         }
         String type = getType(element, varDecl.type.toString());
         sb.append(type).append(" ").append(varDecl.name.getStringValue());
         Expr initialiser = varDecl.initialiser;
-        if (initialiser instanceof Expr.Noop noop) {
+        if (initialiser instanceof Expr.Noop) {
+          Expr.Noop noop = (Expr.Noop) initialiser;
           // For parameters initialiser is replaced with a Noop but we store original one in the Noop
           initialiser = noop.originalExpr;
         }
@@ -205,7 +209,8 @@ public class JactlUtils {
 
       if (astNode instanceof JactlName) {
         PsiElement      psiParent = element.getParent();
-        if (psiParent instanceof JactlPsiElement parent) {
+        if (psiParent instanceof JactlPsiElement) {
+          JactlPsiElement parent = (JactlPsiElement) psiParent;
           astNode = parent.getJactlAstNode();
           if (astNode == null) {
             return defaultText;
@@ -214,19 +219,21 @@ public class JactlUtils {
         return defaultText;
       }
 
-      if (astNode instanceof Stmt.ClassDecl classDecl) {
-        StringBuilder sb = new StringBuilder();
+      if (astNode instanceof Stmt.ClassDecl) {
+        Stmt.ClassDecl classDecl = (Stmt.ClassDecl) astNode;
+        StringBuilder  sb        = new StringBuilder();
         sb.append("class ").append(classDecl.name.getStringValue());
         if (classDecl.baseClass != null) {
-          sb.append(" extends ").append(classDecl.baseClass.getClassName().stream().map(e -> e instanceof Expr.Identifier identifier ? identifier.identifier.getStringValue() : "?").collect(Collectors.joining(".")));
+          sb.append(" extends ").append(classDecl.baseClass.getClassName().stream().map(e -> e instanceof Expr.Identifier ? ((Expr.Identifier) e).identifier.getStringValue() : "?").collect(Collectors.joining(".")));
         }
         return sb.toString();
       }
 
-      if (astNode instanceof Stmt.FunDecl funDeclStmt) {
-        StringBuilder sb = new StringBuilder();
-        var funDecl = funDeclStmt.declExpr;
-        String type = getType(element, funDecl.returnType.toString());
+      if (astNode instanceof Stmt.FunDecl) {
+        Stmt.FunDecl  funDeclStmt = (Stmt.FunDecl) astNode;
+        StringBuilder sb          = new StringBuilder();
+        Expr.FunDecl  funDecl     = funDeclStmt.declExpr;
+        String        type        = getType(element, funDecl.returnType.toString());
         if (funDecl.isStatic()) {
           sb.append("static ");
         }
@@ -327,7 +334,7 @@ public class JactlUtils {
       return parent;
     }
     for (PsiElement child = parent.getFirstChild(); child != null; child = child.getNextSibling()) {
-      var descendant = getFirstDescendant(child, matcher);
+      PsiElement descendant = getFirstDescendant(child, matcher);
       if (descendant != null) {
         return descendant;
       }
@@ -391,13 +398,17 @@ public class JactlUtils {
 
   @NotNull
   public static String elementText(@NotNull String name, JactlNameElementType type) {
-    return switch (JactlNameElementType.getNameType(type)) {
-      case FILE    -> throw new IncorrectOperationException("Invalid operation");
-      case PACKAGE -> throw new IncorrectOperationException("Package rename not supported");
-      case CLASS -> "class " + name + "{}";
-      case FUNCTION, METHOD -> "def " + name + "(){}";
-      case VARIABLE, FIELD, PARAMETER -> "def " + name;
-    };
+    switch (JactlNameElementType.getNameType(type)) {
+      case FILE:      throw new IncorrectOperationException("Invalid operation");
+      case PACKAGE:   throw new IncorrectOperationException("Package rename not supported");
+      case CLASS:     return "class " + name + "{}";
+      case FUNCTION:  return "def " + name + "(){}";
+      case METHOD:    return "def " + name + "(){}";
+      case VARIABLE:  return "def " + name;
+      case FIELD:     return "def " + name;
+      case PARAMETER: return "def " + name;
+      default:        throw new IllegalArgumentException();
+    }
   }
   public static PsiElement newReferenceElement(Project project, JactlNameElementType type, String name, Class<? extends JactlPsiElement> clss) {
     String text = referenceElementText(name, type);
@@ -424,13 +435,17 @@ public class JactlUtils {
 
   @NotNull
   public static String referenceElementText(@NotNull String name, JactlNameElementType type) {
-    return switch (JactlNameElementType.getNameType(type)) {
-      case FILE    -> throw new IncorrectOperationException("Invalid operation");
-      case PACKAGE -> "package " + name;
-      case CLASS -> name + " xxx";
-      case FUNCTION, METHOD -> name + "()";
-      case VARIABLE, FIELD, PARAMETER -> name;
-    };
+    switch (JactlNameElementType.getNameType(type)) {
+      case FILE:      throw new IncorrectOperationException("Invalid operation");
+      case PACKAGE:   return "package " + name;
+      case CLASS:     return name + " xxx";
+      case FUNCTION:  return name + "()";
+      case METHOD:    return name + "()";
+      case VARIABLE:  return name;
+      case FIELD:     return name;
+      case PARAMETER: return name;
+      default:        throw new IllegalArgumentException();
+    }
   }
 
   public static boolean isGlobalsFile(JactlFile file) {
@@ -442,7 +457,16 @@ public class JactlUtils {
     return false;
   }
 
-  public record PackageEntry(boolean isPackage, String name) {}
+  public static final class PackageEntry {
+    private final boolean isPackage;
+    private final String name;
+    public PackageEntry(boolean isPackage, String name) {
+      this.isPackage = isPackage;
+      this.name = name;
+    }
+    public boolean isPackage() { return isPackage; }
+    public String name() { return name; }
+  }
 
   /**
    * Return contents of given package being the immediate sub-packages and classes for this package.
@@ -456,7 +480,7 @@ public class JactlUtils {
       // Add all subdirs and class files (not script files)
       if (child.isDirectory() || child.getFileType() == JactlFileType.INSTANCE) {
         if (!child.isDirectory()) {
-          var jactlFile = getJactlFile(project, child);
+          JactlFile jactlFile = getJactlFile(project, child);
           if (jactlFile == null || jactlFile.isScriptFile()) {
             return;
           }
@@ -469,7 +493,7 @@ public class JactlUtils {
 
   private static void processPackage(Project project, String packageName, Consumer<VirtualFile> processor) {
     String[] packagePath = packageName == null || packageName.isEmpty() ? new String[0] : packageName.split("\\.");
-    for (var root: getSourceRootFiles(project)) {
+    for (VirtualFile root: getSourceRootFiles(project)) {
       VirtualFile baseFile = VfsUtil.findRelativeFile(root, packagePath);
       if (baseFile == null) {
         continue;
@@ -487,7 +511,7 @@ public class JactlUtils {
     processPackage(project, packageName, child -> {
       if (!child.isDirectory() && child.getFileType() == JactlFileType.INSTANCE) {
         String         className = JactlPlugin.removeSuffix(child.getName());
-        var            file      = getJactlFile(project, child);
+        JactlFile      file      = getJactlFile(project, child);
         Stmt.ClassDecl classDecl = JactlParserAdapter.getClassDecl(file, file.getText(), className);
         if (classDecl != null && !classDecl.isScriptClass()) {
           contents.add(classDecl.classDescriptor);
@@ -515,8 +539,8 @@ public class JactlUtils {
     // Remove inner classes (X$Y$Z -> X)
     className = JactlPlugin.stripFromFirst(className, '$');
 
-    String filePath = pkgName.replace('.', File.separatorChar) + File.separatorChar + className + JactlPlugin.DOT_SUFFIX;
-    var file = findVirtualFile(project, filePath);
+    String      filePath = pkgName.replace('.', File.separatorChar) + File.separatorChar + className + JactlPlugin.DOT_SUFFIX;
+    VirtualFile file     = findVirtualFile(project, filePath);
     if (file != null) {
       return getJactlFile(project, file);
     }
@@ -524,7 +548,7 @@ public class JactlUtils {
   }
 
   public static JactlFile findFile(Project project, String filePath) {
-    var file = findVirtualFile(project, filePath);
+    VirtualFile file = findVirtualFile(project, filePath);
     if (file != null) {
       return getJactlFile(project, file);
     }
@@ -532,8 +556,8 @@ public class JactlUtils {
   }
 
   public static VirtualFile findVirtualFile(Project project, String fileName) {
-    for (var root: getSourceRootFiles(project)) {
-      var file = VfsUtil.findRelativeFile(root, fileName.split(File.separator));
+    for (VirtualFile root: getSourceRootFiles(project)) {
+      VirtualFile file = VfsUtil.findRelativeFile(root, fileName.split(File.separator));
       if (file != null) {
         return file;
       }
@@ -566,8 +590,8 @@ public class JactlUtils {
   }
 
   public static PsiDirectory getPackage(PsiElement element) {
-    String packageName = packageName(element, File.separator, true);
-    var dir = findVirtualFile(element.getProject(), packageName);
+    String      packageName = packageName(element, File.separator, true);
+    VirtualFile dir         = findVirtualFile(element.getProject(), packageName);
     if (dir != null) {
       return PsiManager.getInstance(element.getProject()).findDirectory(dir);
     }
@@ -575,7 +599,7 @@ public class JactlUtils {
   }
 
   public static String getProjectPath(Project project, String path) {
-    for (var root: getSourceRoots(project)) {
+    for (String root: getSourceRoots(project)) {
       if (path.startsWith(root)) {
         return JactlPlugin.stripSeparatedPrefix(path, root, File.separator);
       }
@@ -687,10 +711,10 @@ public class JactlUtils {
     String newCode = replacePackage(psiElement.getParent(), destDir, true);
     // Prepend "new" to the code to force it to be parsed as a CLASS_PATH_EXPR or CLASS_TYPE as appropriate
     newCode = "new " + newCode;
-    var newParent = JactlUtils.newElement(psiElement.getProject(), newCode, JactlExprElementType.CLASS_PATH_EXPR, JactlTypeElementType.CLASS_TYPE);
+    PsiElement newParent = JactlUtils.newElement(psiElement.getProject(), newCode, JactlExprElementType.CLASS_PATH_EXPR, JactlTypeElementType.CLASS_TYPE);
     // If we have a nested CLASS_PATH_EXPR then prefer to use it unless we previously had a CLASS_TYPE
     if (JactlUtils.isElementType(newParent, JactlTypeElementType.CLASS_TYPE) && !JactlUtils.isElementType(psiElement.getParent(), JactlTypeElementType.CLASS_TYPE)) {
-      var classPathExpr = JactlUtils.getFirstDescendant(newParent, JactlExprElementType.CLASS_PATH_EXPR);
+      PsiElement classPathExpr = JactlUtils.getFirstDescendant(newParent, JactlExprElementType.CLASS_PATH_EXPR);
       newParent = classPathExpr == null ? newParent : classPathExpr;
     }
     newParent = psiElement.getParent().replace(newParent);
@@ -746,7 +770,7 @@ public class JactlUtils {
                        .evaluateConstExprs(false)
                        .idePlugin(true)
                        .packageChecker(pkgName -> {
-                         var pkgs = JactlUtils.pkgNames(project);
+                         Set<String> pkgs = JactlUtils.pkgNames(project);
                          return pkgs.contains(pkgName);
                        })
                        .classLookup(name -> lookup(name, baseJavaPkgFile, project))
@@ -768,7 +792,7 @@ public class JactlUtils {
       LOG.warn("Class lookup name does not start with expected java package name (name=" + name + ")");
     }
 
-    var file = JactlUtils.findFileForClassPath(project, name);
+    JactlFile file = JactlUtils.findFileForClassPath(project, name);
     if (file == null) {
       return null;
     }
@@ -794,8 +818,8 @@ public class JactlUtils {
   }
 
   public static Map<String,Object> getGlobals(Project project) {
-    Map<String,Object> globals = Collections.EMPTY_MAP;
-    var globalsFile = getGlobalsFile(project);
+    Map<String,Object> globals     = Collections.EMPTY_MAP;
+    VirtualFile        globalsFile = getGlobalsFile(project);
     if (globalsFile != null) {
       String scriptPath = JactlConfiguration.getInstance(project).getGlobalVariablesScript();
       String fileName = FileUtil.toSystemIndependentName(scriptPath.trim());

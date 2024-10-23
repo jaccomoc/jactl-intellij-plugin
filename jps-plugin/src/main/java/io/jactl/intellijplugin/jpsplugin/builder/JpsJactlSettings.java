@@ -32,7 +32,7 @@ public class JpsJactlSettings extends JpsElementBase<JpsJactlSettings> {
   public boolean verboseEnable = false;
 
   public static JpsJactlSettings getSettings(JpsProject project) {
-    var settings = project.getContainer().getChild(ROLE);
+    JpsJactlSettings settings = project.getContainer().getChild(ROLE);
     return settings == null ? new JpsJactlSettings() : settings;
   }
 

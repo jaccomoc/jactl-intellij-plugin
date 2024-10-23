@@ -21,16 +21,17 @@ public class JactlNameElementType extends IElementType {
   }
 
   public static IElementType getElementType(JactlName.NameType nameType) {
-    return switch (nameType) {
-      case FILE      -> JACTL_FILE;
-      case PACKAGE   -> PACKAGE;
-      case CLASS     -> CLASS;
-      case FUNCTION  -> FUNCTION;
-      case METHOD    -> METHOD;
-      case VARIABLE  -> VARIABLE;
-      case FIELD     -> FIELD;
-      case PARAMETER -> PARAMETER;
-    };
+    switch (nameType) {
+      case FILE:      return JACTL_FILE;
+      case PACKAGE:   return PACKAGE;
+      case CLASS:     return CLASS;
+      case FUNCTION:  return FUNCTION;
+      case METHOD:    return METHOD;
+      case VARIABLE:  return VARIABLE;
+      case FIELD:     return FIELD;
+      case PARAMETER: return PARAMETER;
+      default:        throw new IllegalArgumentException();
+    }
   }
 
   public static JactlName.NameType getNameType(JactlNameElementType type) {

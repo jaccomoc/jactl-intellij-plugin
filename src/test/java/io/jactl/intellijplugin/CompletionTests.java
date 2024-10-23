@@ -20,6 +20,7 @@ package io.jactl.intellijplugin;
 import com.intellij.codeInsight.lookup.LookupElement;
 import com.intellij.openapi.application.WriteAction;
 import com.intellij.openapi.vfs.VfsUtil;
+import com.intellij.psi.PsiFile;
 import com.intellij.testFramework.ServiceContainerUtil;
 import com.intellij.testFramework.fixtures.BasePlatformTestCase;
 import io.jactl.JactlType;
@@ -122,25 +123,25 @@ public class CompletionTests extends BasePlatformTestCase {
 
   private void testWithFileName(String fileName, String text, MatchType matchType, String... expected) {
     myFixture.addFileToProject(fileName, text);
-    var psiFile = myFixture.configureByFile(fileName);
+    PsiFile psiFile = myFixture.configureByFile(fileName);
     try {
-      var result = myFixture.completeBasic();
-      List<String> items = result == null ? List.of() : Arrays.stream(result).map(LookupElement::getLookupString).sorted().toList();
+      LookupElement[] result = myFixture.completeBasic();
+      List<String>    items  = result == null ? List.of() : Arrays.stream(result).map(LookupElement::getLookupString).sorted().toList();
       switch (matchType) {
-        case INCLUDES -> {
+        case INCLUDES:
           Arrays.stream(expected).forEach(e -> assertTrue("Missing '" + e + "' in " + items, items.contains(e)));
-        }
-        case EXCLUDES -> {
+          break;
+        case EXCLUDES:
           Arrays.stream(expected).forEach(e -> assertFalse("Should not include '" + e + "' in " + items, items.contains(e)));
-        }
-        case ALL -> {
+          break;
+        case ALL:
           if (expected.length == 1 && expected[0] == NONE) {
             assertTrue("Expected no entries but got : " + items, items.isEmpty());
           }
           else {
             assertEquals(Arrays.stream(expected).sorted().toList(), items);
           }
-        }
+          break;
       }
     } finally {
       WriteAction.run(() -> {

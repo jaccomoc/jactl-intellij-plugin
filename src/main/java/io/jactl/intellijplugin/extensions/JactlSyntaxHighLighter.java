@@ -89,45 +89,46 @@ public class JactlSyntaxHighLighter extends SyntaxHighlighterBase {
 
   @Override
   public TextAttributesKey @NotNull [] getTokenHighlights(IElementType elementType) {
-    if (elementType instanceof JactlTokenType type) {
-      return switch (type.tokenType) {
-        case COMMENT           -> COMMENT_KEYS;
-        case IDENTIFIER        -> IDENTIFIER_KEYS;
-        case DOLLAR_IDENTIFIER -> IDENTIFIER_KEYS;
-        case STRING_CONST      -> STRING_KEYS;
-        case EXPR_STRING_START -> STRING_KEYS;
-        case EXPR_STRING_END   -> STRING_KEYS;
-        case SEMICOLON         -> SEMICOLON_KEYS;
-        case COMMA             -> COMMA_KEYS;
-        case DOT,QUESTION_DOT  -> DOT_KEYS;
-        case LEFT_BRACE        -> BRACES_KEYS;
-        case RIGHT_BRACE       -> BRACES_KEYS;
-        case LEFT_SQUARE       -> BRACKETS_KEYS;
-        case QUESTION_SQUARE   -> BRACKETS_KEYS;
-        case RIGHT_SQUARE      -> BRACKETS_KEYS;
-        case LEFT_PAREN        -> PARENTHESES_KEYS;
-        case RIGHT_PAREN       -> PARENTHESES_KEYS;
-        case DEF               -> TYPE_KEYS;
-        case BYTE              -> TYPE_KEYS;
-        case STRING            -> TYPE_KEYS;
-        case INT               -> TYPE_KEYS;
-        case LONG              -> TYPE_KEYS;
-        case DECIMAL           -> TYPE_KEYS;
-        case DOUBLE            -> TYPE_KEYS;
-        case BOOLEAN           -> TYPE_KEYS;
-        case OBJECT            -> TYPE_KEYS;
-        case MAP               -> TYPE_KEYS;
-        case LIST              -> TYPE_KEYS;
-        default -> {
+    if (elementType instanceof JactlTokenType) {
+      JactlTokenType type = (JactlTokenType) elementType;
+      switch (type.tokenType) {
+        case COMMENT:           return COMMENT_KEYS;
+        case IDENTIFIER:        return IDENTIFIER_KEYS;
+        case DOLLAR_IDENTIFIER: return IDENTIFIER_KEYS;
+        case STRING_CONST:      return STRING_KEYS;
+        case EXPR_STRING_START: return STRING_KEYS;
+        case EXPR_STRING_END:   return STRING_KEYS;
+        case SEMICOLON:         return SEMICOLON_KEYS;
+        case COMMA:             return COMMA_KEYS;
+        case DOT:               return DOT_KEYS;
+        case QUESTION_DOT:      return DOT_KEYS;
+        case LEFT_BRACE:        return BRACES_KEYS;
+        case RIGHT_BRACE:       return BRACES_KEYS;
+        case LEFT_SQUARE:       return BRACKETS_KEYS;
+        case QUESTION_SQUARE:   return BRACKETS_KEYS;
+        case RIGHT_SQUARE:      return BRACKETS_KEYS;
+        case LEFT_PAREN:        return PARENTHESES_KEYS;
+        case RIGHT_PAREN:       return PARENTHESES_KEYS;
+        case DEF:               return TYPE_KEYS;
+        case BYTE:              return TYPE_KEYS;
+        case STRING:            return TYPE_KEYS;
+        case INT:               return TYPE_KEYS;
+        case LONG:              return TYPE_KEYS;
+        case DECIMAL:           return TYPE_KEYS;
+        case DOUBLE:            return TYPE_KEYS;
+        case BOOLEAN:           return TYPE_KEYS;
+        case OBJECT:            return TYPE_KEYS;
+        case MAP:               return TYPE_KEYS;
+        case LIST:              return TYPE_KEYS;
+        default:
           if (type.tokenType.asString != null && Tokeniser.isIdentifier(type.tokenType.asString)) {
-            yield KEY_KEYS;
+            return KEY_KEYS;
           }
           if (isOperator(type)) {
-            yield OPERATOR_KEYS;
+            return OPERATOR_KEYS;
           }
-          yield type.tokenType.isNumber() ? NUMBER_KEYS : EMPTY_KEYS;
-        }
-      };
+          return type.tokenType.isNumber() ? NUMBER_KEYS : EMPTY_KEYS;
+      }
     }
     if (elementType.equals(TokenType.BAD_CHARACTER)) {
       return BAD_CHAR_KEYS;
@@ -136,7 +137,7 @@ public class JactlSyntaxHighLighter extends SyntaxHighlighterBase {
   }
 
   private boolean isOperator(JactlTokenType jactlTokenType) {
-    var tokenType = jactlTokenType.tokenType;
+    io.jactl.TokenType tokenType = jactlTokenType.tokenType;
     return tokenType.isBitOperator() ||
            tokenType.isBooleanOperator() ||
            tokenType.isNumericOperator() ||

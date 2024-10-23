@@ -274,8 +274,8 @@ public class JactlBuilder extends ModuleLevelBuilder {
         return null;
       }
 
-      var settings = JpsJactlSettings.getSettings(compileContext.getProjectDescriptor().getProject());
-      Map<String,Object> globals = settings.getGlobals();
+      JpsJactlSettings   settings = JpsJactlSettings.getSettings(compileContext.getProjectDescriptor().getProject());
+      Map<String,Object> globals  = settings.getGlobals();
 
       Resolver           resolver = new Resolver(jactlContext, globals, script.location);
       List<CompileError> errs     = resolver.resolveScriptOrClass(script, true, scriptName, packageName);

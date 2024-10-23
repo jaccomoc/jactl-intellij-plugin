@@ -47,7 +47,7 @@ public class JactlParserDefinition extends DefaultASTFactoryImpl implements Pars
   @NotNull
   @Override
   public PsiParser createParser(final Project project) {
-    var parser = new JactlParserAdapter(project);
+    JactlParserAdapter parser = new JactlParserAdapter(project);
     //System.out.println("DEBUG: new parser=" + System.identityHashCode(parser));
     return parser;
   }
@@ -61,7 +61,7 @@ public class JactlParserDefinition extends DefaultASTFactoryImpl implements Pars
   @NotNull
   @Override
   public PsiFile createFile(@NotNull FileViewProvider viewProvider) {
-    var file = new JactlFile(viewProvider);
+    JactlFile file = new JactlFile(viewProvider);
     //System.out.println("DEBUG: new file=" + System.identityHashCode(file));
     return file;
   }
@@ -69,7 +69,7 @@ public class JactlParserDefinition extends DefaultASTFactoryImpl implements Pars
   @NotNull
   @Override
   public PsiElement createElement(ASTNode node) {
-    var elem = JactlTypes.Factory.createElement(node);
+    PsiElement elem = JactlTypes.Factory.createElement(node);
     return elem;
   }
 

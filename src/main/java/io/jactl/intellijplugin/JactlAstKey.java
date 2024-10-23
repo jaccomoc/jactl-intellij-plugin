@@ -53,7 +53,8 @@ public class JactlAstKey {
   @Override
   public boolean equals(Object obj) {
     if (this == obj) { return true; }
-    if (obj instanceof JactlAstKey other) {
+    if (obj instanceof JactlAstKey) {
+      JactlAstKey other = (JactlAstKey) obj;
       if (type != null && !type.equals(other.type) || type == null && other.type != null) {
         return false;
       }

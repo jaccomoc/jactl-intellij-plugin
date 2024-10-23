@@ -72,47 +72,45 @@ final class JactlColorSettingsPage implements ColorSettingsPage {
   @Override
   public String getDemoText() {
     return
-      """
-      package <package>a.b.c</package>
-      import <class>a.b.BaseClass</class>
-      import static <class>a.b.BaseClass</class>.<field>FFF</field> as <identifier>GGG</identifier>
-      
-      // This is a line comment
-      /* And this is a multi-
-         line comment */
-      def <function>func</function>(String <parameter>str</parameter>) {
-        def (<variable>xvar</variable>,<variable>yvar</variable>) = [1234, 1.234]
-        String <variable>result</variable> = "Interpolated ${'string'}: $<parameter>str</parameter>: x=$<variable>xvar</variable>, y=$<variable>yvar</variable>"
-        return <variable>result</variable>
-      }
-      
-      def <variable>variable</variable> = <function>func</function>('data')
-      
-      class <class>SomeClass</class> extends <class>BaseClass</class> {
-        class <class>Inner</class> {
-          const <field>MAX</field> = 10000
-          static def <function>calc</function>(int <parameter>count</parameter>, def <parameter>callable</parameter>) {
-            def <variable>result</variable>
-            for (int <variable>i</variable> = 0; <variable>i</variable> < <parameter>count</parameter> && <variable>i</variable> < <field>MAX</field>; <variable>i</variable>++) {
-              <variable>result</variable> += <parameter>callable</parameter>(<variable>i</variable>)
-            }
-            return <variable>result</variable>
-          }
-        }
-      
-        int <field>intField</field>
-        double <field>doubleField</field>
-        def <method>instanceFunc</method>(<parameter>param</parameter>) {
-          switch (<parameter>param</parameter>) {
-            [String,_,int] -> true
-            default        -> false
-          }
-        }
-      }
-      """;
+      "package <package>a.b.c</package>\n" +
+      "import <class>a.b.BaseClass</class>\n" +
+      "import static <class>a.b.BaseClass</class>.<field>FFF</field> as <identifier>GGG</identifier>\n" +
+      "\n" +
+      "// This is a line comment\n" +
+      "/* And this is a multi-\n" +
+      "   line comment */\n" +
+      "def <function>func</function>(String <parameter>str</parameter>) {\n" +
+      "  def (<variable>xvar</variable>,<variable>yvar</variable>) = [1234, 1.234]\n" +
+      "  String <variable>result</variable> = \"Interpolated ${'string'}: $<parameter>str</parameter>: x=$<variable>xvar</variable>, y=$<variable>yvar</variable>\"\n" +
+      "  return <variable>result</variable>\n" +
+      "}\n" +
+      "\n" +
+      "def <variable>variable</variable> = <function>func</function>('data')\n" +
+      "\n" +
+      "class <class>SomeClass</class> extends <class>BaseClass</class> {\n" +
+      "  class <class>Inner</class> {\n" +
+      "    const <field>MAX</field> = 10000\n" +
+      "    static def <function>calc</function>(int <parameter>count</parameter>, def <parameter>callable</parameter>) {\n" +
+      "      def <variable>result</variable>\n" +
+      "      for (int <variable>i</variable> = 0; <variable>i</variable> < <parameter>count</parameter> && <variable>i</variable> < <field>MAX</field>; <variable>i</variable>++) {\n" +
+      "        <variable>result</variable> += <parameter>callable</parameter>(<variable>i</variable>)\n" +
+      "      }\n" +
+      "      return <variable>result</variable>\n" +
+      "    }\n" +
+      "  }\n" +
+      "\n" +
+      "  int <field>intField</field>\n" +
+      "  double <field>doubleField</field>\n" +
+      "  def <method>instanceFunc</method>(<parameter>param</parameter>) {\n" +
+      "    switch (<parameter>param</parameter>) {\n" +
+      "      [String,_,int] -> true\n" +
+      "      default        -> false\n" +
+      "    }\n" +
+      "  }\n" +
+      "}\n";
   }
 
-  private static final Map<String,TextAttributesKey> ADDITIONAL = new HashMap<>() {{
+  private static final Map<String,TextAttributesKey> ADDITIONAL = new HashMap<String, TextAttributesKey>() {{
     put("variable",  JactlSyntaxHighLighter.LOCAL_VARIABLE);
     put("parameter", JactlSyntaxHighLighter.PARAMETER);
     put("field",     JactlSyntaxHighLighter.FIELD);

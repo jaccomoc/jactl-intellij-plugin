@@ -26,11 +26,10 @@ import com.intellij.openapi.module.ModuleUtilCore;
 import com.intellij.openapi.util.Ref;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.psi.PsiElement;
+import com.intellij.psi.PsiFile;
 import io.jactl.intellijplugin.JactlFile;
 import io.jactl.intellijplugin.JactlUtils;
-import io.jactl.intellijplugin.extensions.settings.JactlConfigurable;
 import io.jactl.intellijplugin.extensions.settings.JactlConfiguration;
-import io.jactl.intellijplugin.jpsplugin.builder.JpsJactlSettings;
 import io.jactl.intellijplugin.psi.JactlNameElementType;
 import io.jactl.intellijplugin.psi.impl.JactlPsiNameImpl;
 import org.jetbrains.annotations.NotNull;
@@ -46,14 +45,15 @@ public class JactlRunConfigurationProducer extends LazyRunConfigurationProducer<
 
   @Override
   protected boolean setupConfigurationFromContext(@NotNull JactlRunConfiguration configuration, @NotNull ConfigurationContext context, @NotNull Ref<PsiElement> sourceElement) {
-    var location = context.getLocation();
+    Location<PsiElement> location = context.getLocation();
     if (location == null) { return false; }
-    var element = location.getPsiElement();
-    var file = element.getContainingFile();
-    if (file instanceof JactlFile jactlFile) {
-      var virtualFile = jactlFile.getVirtualFile();
+    PsiElement element = location.getPsiElement();
+    PsiFile    file    = element.getContainingFile();
+    if (file instanceof JactlFile) {
+      JactlFile   jactlFile   = (JactlFile) file;
+      VirtualFile virtualFile = jactlFile.getVirtualFile();
       if (virtualFile == null) { return false; }
-      var firstClass = (JactlPsiNameImpl)JactlUtils.getFirstDescendant(jactlFile, JactlNameElementType.CLASS);
+      JactlPsiNameImpl firstClass = (JactlPsiNameImpl)JactlUtils.getFirstDescendant(jactlFile, JactlNameElementType.CLASS);
       if (firstClass != null && firstClass.isTopLevelClass()) {
         // Can only run scripts not classes
         return false;

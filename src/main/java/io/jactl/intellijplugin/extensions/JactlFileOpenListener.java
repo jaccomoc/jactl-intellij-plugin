@@ -31,7 +31,7 @@ public class JactlFileOpenListener implements FileEditorManagerListener {
   @Override
   public void fileOpened(@NotNull FileEditorManager source, @NotNull VirtualFile file) {
     // Reparse if globals have changed since last time file was modified
-    var globalsFile = JactlUtils.getGlobalsFile(source.getProject());
+    VirtualFile globalsFile = JactlUtils.getGlobalsFile(source.getProject());
     if (globalsFile != null && globalsFile.getModificationStamp() >= file.getModificationStamp()) {
       ApplicationManager.getApplication().invokeLater(() -> FileContentUtil.reparseFiles(source.getProject(), List.of(file), false));
     }

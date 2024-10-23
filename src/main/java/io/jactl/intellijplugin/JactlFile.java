@@ -5,6 +5,7 @@ import com.intellij.openapi.fileTypes.FileType;
 import com.intellij.psi.FileViewProvider;
 import com.intellij.psi.PsiElement;
 import com.intellij.util.IncorrectOperationException;
+import io.jactl.JactlUserDataHolder;
 import io.jactl.Stmt;
 import io.jactl.intellijplugin.common.JactlPlugin;
 import io.jactl.intellijplugin.psi.JactlNameElementType;
@@ -64,7 +65,7 @@ public class JactlFile extends PsiFileBase implements JactlPsiElement {
   @Override
   public PsiElement setName(@NotNull String name) throws IncorrectOperationException {
     if (getTopLevelClass() != null) {
-      var className = (JactlPsiNameImpl)JactlUtils.getFirstDescendant(topClassPsiElement(), JactlPsiNameImpl.class);
+      JactlPsiNameImpl className = (JactlPsiNameImpl)JactlUtils.getFirstDescendant(topClassPsiElement(), JactlPsiNameImpl.class);
       className.setName(name);
     }
     return super.setName(name);
@@ -84,9 +85,10 @@ public class JactlFile extends PsiFileBase implements JactlPsiElement {
    * @return the top level class or null
    */
   public Stmt.ClassDecl getTopLevelClass() {
-    var topClass = topClassPsiElement();
-    var jactlNode = topClass == null ? null : topClass.getJactlAstNode();
-    if (jactlNode instanceof Stmt.ClassDecl classDecl && classDecl.isPrimaryClass) {
+    JactlPsiElement     topClass  = topClassPsiElement();
+    JactlUserDataHolder jactlNode = topClass == null ? null : topClass.getJactlAstNode();
+    if (jactlNode instanceof Stmt.ClassDecl && ((Stmt.ClassDecl) jactlNode).isPrimaryClass) {
+      Stmt.ClassDecl classDecl = (Stmt.ClassDecl) jactlNode;
       return classDecl;
     }
     return null;
@@ -97,7 +99,7 @@ public class JactlFile extends PsiFileBase implements JactlPsiElement {
   }
 
   public boolean isScriptFile() {
-    var classDecl = getTopLevelClass();
+    Stmt.ClassDecl classDecl = getTopLevelClass();
     // Script if no top level class or top level class does not match file name
     // (such as when editing a script and first stmt is a class declaration and
     // editing not yet complete).
@@ -106,9 +108,9 @@ public class JactlFile extends PsiFileBase implements JactlPsiElement {
     }
 
     // Incomplete file so check if first element is a class declaration with same name as file
-    var firstChild = JactlUtils.getFirstChild(this, child -> !JactlUtils.isElementType(child, JactlStmtElementType.IMPORT_STMT, JactlNameElementType.PACKAGE));
+    PsiElement firstChild = JactlUtils.getFirstChild(this, child -> !JactlUtils.isElementType(child, JactlStmtElementType.IMPORT_STMT, JactlNameElementType.PACKAGE));
     if (JactlUtils.isElementType(firstChild, JactlStmtElementType.CLASS_DECL)) {
-      var name = JactlUtils.getFirstDescendant(firstChild, JactlNameElementType.CLASS);
+      PsiElement name = JactlUtils.getFirstDescendant(firstChild, JactlNameElementType.CLASS);
       return !name.getText().equals(getFileNameNoSuffix());
     }
     return true;

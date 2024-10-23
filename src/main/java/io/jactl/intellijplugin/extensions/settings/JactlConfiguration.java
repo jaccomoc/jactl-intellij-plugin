@@ -42,7 +42,7 @@ public final class JactlConfiguration implements PersistentStateComponent<JpsJac
 
   @Override
   public @Nullable JpsJactlSettings getState() {
-    var bean = new JpsJactlSettings();
+    JpsJactlSettings bean = new JpsJactlSettings();
     bean.globalVariablesScript = globalVariablesScript;
     bean.verboseEnable         = verboseEnabled;
     return bean;

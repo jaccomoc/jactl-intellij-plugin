@@ -17,7 +17,9 @@ public interface JactlTypes {
       if (type == JactlExprElementType.IDENTIFIER)       { return new JactlPsiIdentifierExprImpl(node); }
       if (type instanceof JactlExprElementType)          { return new JactlPsiExprImpl(node); }
       if (type instanceof JactlListElementType)          { return new JactlPsiListImpl(node); }
-      if (type instanceof JactlNameElementType nameType) { return new JactlPsiNameImpl(node, nameType); }
+      if (type instanceof JactlNameElementType) {
+        JactlNameElementType nameType = (JactlNameElementType) type;
+        return new JactlPsiNameImpl(node, nameType); }
 
       throw new IllegalStateException("Unexpected type of node.getElementType(): " + type.getClass().getName());
     }

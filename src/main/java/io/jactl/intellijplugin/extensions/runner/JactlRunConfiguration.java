@@ -205,7 +205,7 @@ public class JactlRunConfiguration extends ModuleBasedConfiguration<RunConfigura
   }
 
   private Module getModule() {
-    var module = getConfigurationModule().getModule();
+    Module module = getConfigurationModule().getModule();
     if (module != null) {
       return module;
     }
@@ -262,7 +262,7 @@ public class JactlRunConfiguration extends ModuleBasedConfiguration<RunConfigura
     }
 
     if (globalVariablesScript != null && !globalVariablesScript.trim().isEmpty()) {
-      var fileName = FileUtil.toSystemIndependentName(globalVariablesScript.trim());
+      String fileName = FileUtil.toSystemIndependentName(globalVariablesScript.trim());
       try {
         JactlPlugin.getGlobals(globalVariablesScript);
       }
@@ -289,8 +289,8 @@ public class JactlRunConfiguration extends ModuleBasedConfiguration<RunConfigura
 
       @Override
       protected @NotNull TargetedCommandLineBuilder createTargetedCommandLine(@NotNull TargetEnvironmentRequest request) throws ExecutionException {
-        var lineBuilder = super.createTargetedCommandLine(request);
-        File inputFile = InputRedirectAware.getInputFile(JactlRunConfiguration.this);
+        TargetedCommandLineBuilder lineBuilder = super.createTargetedCommandLine(request);
+        File                       inputFile   = InputRedirectAware.getInputFile(JactlRunConfiguration.this);
         if (inputFile != null) {
           lineBuilder.setInputFile(request.getDefaultVolume().createUpload(inputFile.getAbsolutePath()));
         }
@@ -323,7 +323,7 @@ public class JactlRunConfiguration extends ModuleBasedConfiguration<RunConfigura
     params.getVMParametersList().addParametersString(getVMParameters());
 
     // Add jactl jar to class path
-    var jactlJar = getJactlJarFile(module);
+    VirtualFile jactlJar = getJactlJarFile(module);
     if (jactlJar == null) {
       throw new CantRunException("Cannot locate jactl jar file");
     }

@@ -73,7 +73,7 @@ public class JactlRunConfigurationEditor extends SettingsEditor<JactlRunConfigur
       return script != null && !fileIndex.isInTestSourceContent(script);
     };
     jrePathEditor.setDefaultJreSelector(
-      new DefaultJreSelector.SdkFromModuleDependencies<>(modulesComboBox, ModulesComboBox::getSelectedModule, productionOnly) {
+      new DefaultJreSelector.SdkFromModuleDependencies<ModulesComboBox>(modulesComboBox, ModulesComboBox::getSelectedModule, productionOnly) {
         @Override public void addChangeListener(@NotNull Runnable listener) {
           super.addChangeListener(listener);
           scriptPath.getChildComponent().getDocument().addDocumentListener(new DocumentAdapter() {

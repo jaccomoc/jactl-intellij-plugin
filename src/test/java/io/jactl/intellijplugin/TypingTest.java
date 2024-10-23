@@ -42,42 +42,41 @@ public class TypingTest extends BaseTypingTestCase {
   // = TESTS
 
   private static final String CLASS_DECL =
-    """
-      package org.test.sub
-
-      class AClass {
-          class BBB {
-              const CCC = 1
-              def fff(int xx = 1) { xx }
-          }
-          class C { def f() { def x = new BBB() } }
-          //  int xxx
-          //  static def func(int i) { 'func'+i }
-          //  const VALUE = 2
-          def ppp(it, x) {
-              x++
-              for (def i = 0; i < xx; i++) {
-                  /abc.*([^ ]*)/ and x--
-                  if (x < 10) {
-                      x += 10  /* comment */
-                  }
-              }
-              switch (it) {
-                  [_,_,int] -> true
-                  default   -> false
-              }
-              while (true) {
-                  x += 10 if x > 100
-                  x -= 20 if /abc/in
-                  it =~ /xyz/ or x++
-              }
-              println x
-              return x
-          }
-          def f() {
-              ppp(2)
-          }
-      }""";
+    "package org.test.sub\n" +
+    "\n" +
+    "class AClass {\n" +
+    "    class BBB {\n" +
+    "        const CCC = 1\n" +
+    "        def fff(int xx = 1) { xx }\n" +
+    "    }\n" +
+    "    class C { def f() { def x = new BBB() } }\n" +
+    "    //  int xxx\n" +
+    "    //  static def func(int i) { 'func'+i }\n" +
+    "    //  const VALUE = 2\n" +
+    "    def ppp(it, x) {\n" +
+    "        x++\n" +
+    "        for (def i = 0; i < xx; i++) {\n" +
+    "            /abc.*([^ ]*)/ and x--\n" +
+    "            if (x < 10) {\n" +
+    "                x += 10  /* comment */\n" +
+    "            }\n" +
+    "        }\n" +
+    "        switch (it) {\n" +
+    "            [_,_,int] -> true\n" +
+    "            default   -> false\n" +
+    "        }\n" +
+    "        while (true) {\n" +
+    "            x += 10 if x > 100\n" +
+    "            x -= 20 if /abc/in\n" +
+    "            it =~ /xyz/ or x++\n" +
+    "        }\n" +
+    "        println x\n" +
+    "        return x\n" +
+    "    }\n" +
+    "    def f() {\n" +
+    "        ppp(2)\n" +
+    "    }\n" +
+    "}";
 
   public void testClassDecl() {
     String text = CLASS_DECL;

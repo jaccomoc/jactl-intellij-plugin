@@ -46,8 +46,8 @@ public class JactlMoveFileHandler extends MoveFileHandler {
 
   @Override
   public void prepareMovedFile(PsiFile file, PsiDirectory moveDestination, Map<PsiElement, PsiElement> oldToNewMap) {
-    var packageDecl = JactlUtils.getFirstDescendant(file, JactlNameElementType.PACKAGE);
-    String destDir = JactlUtils.getProjectPath(moveDestination);
+    PsiElement packageDecl = JactlUtils.getFirstDescendant(file, JactlNameElementType.PACKAGE);
+    String     destDir     = JactlUtils.getProjectPath(moveDestination);
     if (packageDecl != null) {
       String newCode;
       IElementType elementType;

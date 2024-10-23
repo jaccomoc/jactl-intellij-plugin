@@ -26,9 +26,11 @@ import org.jetbrains.jps.incremental.CompileContext;
 import org.jetbrains.jps.indices.IgnoredFileIndex;
 import org.jetbrains.jps.indices.ModuleExcludeIndex;
 import org.jetbrains.jps.model.JpsModel;
+import org.jetbrains.jps.model.java.JavaSourceRootProperties;
 import org.jetbrains.jps.model.java.JavaSourceRootType;
 import org.jetbrains.jps.model.java.JpsJavaExtensionService;
 import org.jetbrains.jps.model.module.JpsModule;
+import org.jetbrains.jps.model.module.JpsTypedModuleSourceRoot;
 
 import java.io.File;
 import java.util.*;
@@ -60,7 +62,7 @@ public class JactlBuildTarget extends BuildTarget<JactlBuildRootDescriptor> {
   @Override
   public @NotNull List<JactlBuildRootDescriptor> computeRootDescriptors(@NotNull JpsModel jpsModel, @NotNull ModuleExcludeIndex moduleExcludeIndex, @NotNull IgnoredFileIndex ignoredFileIndex, @NotNull BuildDataPaths buildDataPaths) {
     List<JactlBuildRootDescriptor> result = new ArrayList<>();
-    for (var root: module.getSourceRoots(isTests() ? JavaSourceRootType.TEST_SOURCE : JavaSourceRootType.SOURCE)) {
+    for (JpsTypedModuleSourceRoot<JavaSourceRootProperties> root: module.getSourceRoots(isTests() ? JavaSourceRootType.TEST_SOURCE : JavaSourceRootType.SOURCE)) {
       result.add(new JactlBuildRootDescriptor(root.getFile(), this));
     }
     return result;

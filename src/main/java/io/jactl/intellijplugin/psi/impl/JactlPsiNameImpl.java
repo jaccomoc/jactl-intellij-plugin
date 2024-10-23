@@ -8,6 +8,7 @@ import com.intellij.psi.search.GlobalSearchScope;
 import com.intellij.psi.search.LocalSearchScope;
 import com.intellij.psi.search.SearchScope;
 import com.intellij.util.IncorrectOperationException;
+import io.jactl.JactlUserDataHolder;
 import io.jactl.Stmt;
 import io.jactl.intellijplugin.JactlUtils;
 import io.jactl.intellijplugin.psi.AbstractJactlPsiStmt;
@@ -66,9 +67,10 @@ public class JactlPsiNameImpl extends AbstractJactlPsiStmt implements JactlPsiNa
     if (type == JactlNameElementType.CLASS) {
       // Check if top level class in a class file and verify that class name matches file name
       PsiElement parent = getParent();
-      if (parent instanceof JactlPsiElement jactlPsiElement) {
-        var jactlAstNode = jactlPsiElement.getJactlAstNode();
-        return jactlAstNode instanceof Stmt.ClassDecl classDecl && classDecl.isPrimaryClass;
+      if (parent instanceof JactlPsiElement) {
+        JactlPsiElement     jactlPsiElement = (JactlPsiElement) parent;
+        JactlUserDataHolder jactlAstNode    = jactlPsiElement.getJactlAstNode();
+        return jactlAstNode instanceof Stmt.ClassDecl && ((Stmt.ClassDecl) jactlAstNode).isPrimaryClass;
       }
     }
     return false;
@@ -90,13 +92,13 @@ public class JactlPsiNameImpl extends AbstractJactlPsiStmt implements JactlPsiNa
 
   @Override
   public @NotNull SearchScope getUseScope() {
-    var parent = getDeclParent();
+    JactlPsiElement parent = getDeclParent();
     if (parent == null) {
       LOG.warn("Could not find decl parent for " + this);
       return GlobalSearchScope.allScope(getProject());
     }
-    var jactlAstNode = parent.getJactlAstNode();
-    var block = jactlAstNode.getBlock();
+    JactlUserDataHolder jactlAstNode = parent.getJactlAstNode();
+    Stmt.Block          block        = jactlAstNode.getBlock();
     if (block == null) {
       LOG.warn("Block is null for " + jactlAstNode);
       return GlobalSearchScope.allScope(getProject());
@@ -114,8 +116,17 @@ public class JactlPsiNameImpl extends AbstractJactlPsiStmt implements JactlPsiNa
   public void delete() throws IncorrectOperationException {
     // If we are being deleted we need to delete the actual class/function/method/field instead
     switch (JactlNameElementType.getNameType(type)) {
-      case FILE,PACKAGE -> throw new IncorrectOperationException("Invalid operation for " + type);
-      case CLASS,FUNCTION,METHOD,VARIABLE,FIELD,PARAMETER -> getParent().delete();
+      case FILE:
+      case PACKAGE:
+        throw new IncorrectOperationException("Invalid operation for " + type);
+      case CLASS:
+      case FUNCTION:
+      case METHOD:
+      case VARIABLE:
+      case FIELD:
+      case PARAMETER:
+        getParent().delete();
+        break;
     }
   }
 }

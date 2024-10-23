@@ -49,8 +49,9 @@ public class JactlHighlightAnnotator implements Annotator {
     }
 
     if (element instanceof JactlPsiIdentifierImpl &&
-        element.getParent() instanceof JactlPsiName parent &&
-        JactlUtils.isElementType(parent, JactlNameElementType.PACKAGE)) {
+        element.getParent() instanceof JactlPsiName &&
+        JactlUtils.isElementType((JactlPsiName) element.getParent(), JactlNameElementType.PACKAGE)) {
+      JactlPsiName parent = (JactlPsiName) element.getParent();
       List<String> idents = new ArrayList<>();
       for (PsiElement e = parent.getFirstChild(); e != element; e = e.getNextSibling()) {
         if (e instanceof JactlPsiIdentifierImpl) {
@@ -78,7 +79,8 @@ public class JactlHighlightAnnotator implements Annotator {
         error.accept("Package name does not match package name for file (" + filePackage + ")");
       }
     }
-    else if (element instanceof JactlPsiName psiName && psiName.isTopLevelClass()) {
+    else if (element instanceof JactlPsiName && ((JactlPsiName) element).isTopLevelClass()) {
+      JactlPsiName psiName = (JactlPsiName) element;
       // Check if top level class in a class file and verify that class name matches file name
       String classNameFromFile = psiName.getFile().getFileNameNoSuffix();
       if (!psiName.getText().equals(classNameFromFile)) {
@@ -86,7 +88,8 @@ public class JactlHighlightAnnotator implements Annotator {
         return;
       }
     }
-    else if (element instanceof JactlPsiTypeImpl type) {
+    else if (element instanceof JactlPsiTypeImpl) {
+      JactlPsiTypeImpl type = (JactlPsiTypeImpl) element;
       if (!type.isBuiltIn() && type.findClassDefinition() == null) {
         error.accept("Unknown type " + type.getText());
         return;
@@ -102,26 +105,28 @@ public class JactlHighlightAnnotator implements Annotator {
 
     // Annotate based on type of identifier
     if (JactlUtils.isElementType(element, JactlTokenTypes.IDENTIFIER)) {
-      var          parent     = element.getParent();
+      PsiElement   parent     = element.getParent();
       IElementType parentType = parent.getNode().getElementType();
       if (!(parentType instanceof JactlNameElementType)) {
         PsiReference reference = element.getReference();
-        var          resolved  = reference != null ? reference.resolve() : null;
+        PsiElement   resolved  = reference != null ? reference.resolve() : null;
         if (resolved == null || resolved.getNode() == null) {
           return;
         }
         parentType = resolved.getNode().getElementType();
       }
-      if (parentType instanceof JactlNameElementType parentNameType) {
-        TextAttributesKey textType = switch (JactlNameElementType.getNameType(parentNameType)) {
-          case PACKAGE   -> JactlSyntaxHighLighter.PACKAGE;
-          case CLASS     -> JactlSyntaxHighLighter.CLASS;
-          case FUNCTION  -> JactlSyntaxHighLighter.FUNCTION;
-          case METHOD    -> JactlSyntaxHighLighter.METHOD;
-          case VARIABLE  -> JactlSyntaxHighLighter.LOCAL_VARIABLE;
-          case FIELD     -> JactlSyntaxHighLighter.FIELD;
-          case PARAMETER -> JactlSyntaxHighLighter.PARAMETER;
-          default        -> null;
+      if (parentType instanceof JactlNameElementType) {
+        JactlNameElementType parentNameType = (JactlNameElementType) parentType;
+        TextAttributesKey textType;
+        switch (JactlNameElementType.getNameType(parentNameType)) {
+          case PACKAGE:   textType = JactlSyntaxHighLighter.PACKAGE;         break;
+          case CLASS:     textType = JactlSyntaxHighLighter.CLASS;           break;
+          case FUNCTION:  textType = JactlSyntaxHighLighter.FUNCTION;        break;
+          case METHOD:    textType = JactlSyntaxHighLighter.METHOD;          break;
+          case VARIABLE:  textType = JactlSyntaxHighLighter.LOCAL_VARIABLE;  break;
+          case FIELD:     textType = JactlSyntaxHighLighter.FIELD;           break;
+          case PARAMETER: textType = JactlSyntaxHighLighter.PARAMETER;       break;
+          default:        textType = null;                                   break;
         };
         if (textType != null) {
           holder.newSilentAnnotation(HighlightSeverity.INFORMATION)

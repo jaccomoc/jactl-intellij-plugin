@@ -114,7 +114,7 @@ public class JactlFormatingModelBuilder implements FormattingModelBuilder {
 
     @Override
     public boolean isIncomplete() {
-      var result = super.isIncomplete();
+      boolean result = super.isIncomplete();
       return result;
     }
 

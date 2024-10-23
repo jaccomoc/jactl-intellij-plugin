@@ -2,6 +2,11 @@ plugins {
     id("org.jetbrains.intellij.platform.module")
 }
 
+java {
+    sourceCompatibility = JavaVersion.VERSION_1_8;
+    targetCompatibility = JavaVersion.VERSION_1_8;
+}
+
 repositories {
     mavenLocal()
     mavenCentral()
@@ -16,6 +21,6 @@ dependencies {
         intellijIdeaCommunity("2024.1.4")
         bundledPlugin("com.intellij.java")
         instrumentationTools()
+        implementation("io.jactl:jactl:2.0.1-SNAPSHOT")
     }
-    implementation("io.jactl:jactl:2.0.1-SNAPSHOT")
 }

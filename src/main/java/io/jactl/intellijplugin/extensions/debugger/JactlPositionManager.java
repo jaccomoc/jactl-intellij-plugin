@@ -25,6 +25,7 @@ import com.intellij.debugger.impl.DebuggerUtilsAsync;
 import com.intellij.debugger.impl.DebuggerUtilsEx;
 import com.intellij.debugger.requests.ClassPrepareRequestor;
 import com.intellij.openapi.application.ReadAction;
+import com.intellij.openapi.fileTypes.FileType;
 import com.intellij.openapi.fileTypes.FileTypeRegistry;
 import com.intellij.openapi.fileTypes.LanguageFileType;
 import com.intellij.psi.PsiElement;
@@ -67,10 +68,11 @@ public class JactlPositionManager implements PositionManager {
         filePath = pkgPath.isEmpty() ? fileName : pkgPath + File.separator + fileName;
       }
       filePath = JactlPlugin.stripSeparatedPrefix(filePath, JactlPlugin.BASE_JACTL_PKG_PATH, File.separator);
-      var fileType = FileTypeRegistry.getInstance().getFileTypeByFileName(fileName);
-      if (fileType instanceof LanguageFileType lfileType && lfileType.getLanguage() == JactlLanguage.INSTANCE) {
-        int lineNum = DebuggerUtilsEx.getLineNumber(location, true);
-        PsiFile file = lineNum >= 0 ? JactlUtils.findFile(process.getProject(), filePath) : null;
+      FileType fileType = FileTypeRegistry.getInstance().getFileTypeByFileName(fileName);
+      if (fileType instanceof LanguageFileType && ((LanguageFileType) fileType).getLanguage() == JactlLanguage.INSTANCE) {
+        LanguageFileType lfileType = (LanguageFileType) fileType;
+        int              lineNum   = DebuggerUtilsEx.getLineNumber(location, true);
+        PsiFile          file      = lineNum >= 0 ? JactlUtils.findFile(process.getProject(), filePath) : null;
         if (file != null) {
           return SourcePosition.createFromLine(file, lineNum);
         }
@@ -100,7 +102,7 @@ public class JactlPositionManager implements PositionManager {
     getJactlFile(sourcePosition);         // Verify we have a Jactl file
     int lineNum = sourcePosition.getLine() + 1;
     try {
-      var locations = DebuggerUtilsAsync.locationsOfLineSync(referenceType,  DebugProcess.JAVA_STRATUM, null, lineNum);
+      List<Location> locations = DebuggerUtilsAsync.locationsOfLineSync(referenceType, DebugProcess.JAVA_STRATUM, null, lineNum);
       if (locations != null && !locations.isEmpty()) {
         return locations;
       }
@@ -126,7 +128,8 @@ public class JactlPositionManager implements PositionManager {
 
   private JactlFile getJactlFile(SourcePosition position) throws NoDataException {
     PsiFile file = position.getFile();
-    if (file instanceof JactlFile jactlFile) {
+    if (file instanceof JactlFile) {
+      JactlFile jactlFile = (JactlFile) file;
       return jactlFile;
     }
     throw NoDataException.INSTANCE;
@@ -134,14 +137,15 @@ public class JactlPositionManager implements PositionManager {
 
   // Should be called from within ReadAction.compute() (?)
   private ClassDescriptor getClassDescriptor(SourcePosition sourcePosition) {
-    var file = sourcePosition.getFile();
+    PsiFile file = sourcePosition.getFile();
     if (file instanceof JactlFile) {
       PsiElement element = file.findElementAt(sourcePosition.getOffset());
       element = JactlUtils.skipWhitespaceAndComments(element);
       while (element != null && !(element instanceof JactlPsiElement)) {
         element = element.getParent();
       }
-      if (element instanceof JactlPsiElement jactlPsiElement) {
+      if (element instanceof JactlPsiElement) {
+        JactlPsiElement jactlPsiElement = (JactlPsiElement) element;
         return JactlParserAdapter.getClass(jactlPsiElement);
       }
     }

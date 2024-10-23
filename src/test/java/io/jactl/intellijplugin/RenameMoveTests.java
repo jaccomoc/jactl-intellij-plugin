@@ -10,6 +10,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
 import java.util.Arrays;
+import java.util.Iterator;
 
 public class RenameMoveTests extends BasePlatformTestCase {
   @Override
@@ -123,20 +124,20 @@ public class RenameMoveTests extends BasePlatformTestCase {
   public void testClass() {
     String scriptText = "package a.b; class CC<caret>C{ static fff() {} }";
     myFixture.addFileToProject("a/b/CCC.jactl", scriptText);
-    var fileContents = new String[] {
+    String[] fileContents = new String[] {
       "a/b/script.jactl",  "package a.b; new CCC(); def f() { CCC c; c.fff() }",
       "script2.jactl",     "new a.b.CCC(); \"${new a.b.CCC()}\"",
       "script3.jactl",     "import a.b.CCC; new CCC(); \"${new CCC()}\"",
       "a/script4.jactl",   "package a; new a.b.CCC().fff()",
       "a/b/script5.jactl", "package a.b; new a.b.CCC().fff()"
     };
-    for (var iter = Arrays.stream(fileContents).iterator(); iter.hasNext(); ) {
+    for (Iterator<String> iter = Arrays.stream(fileContents).iterator(); iter.hasNext(); ) {
       myFixture.addFileToProject(iter.next(), iter.next());
     }
     myFixture.configureByFiles("a/b/CCC.jactl");
     myFixture.renameElementAtCaret("ABC");
     verifyFile("a/b/ABC.jactl", renamedText(scriptText, "CCC", "ABC"));
-    for (var iter = Arrays.stream(fileContents).iterator(); iter.hasNext(); ) {
+    for (Iterator<String> iter = Arrays.stream(fileContents).iterator(); iter.hasNext(); ) {
       verifyFile(iter.next(), renamedText(iter.next(), "CCC", "ABC"));
     }
   }
@@ -144,10 +145,10 @@ public class RenameMoveTests extends BasePlatformTestCase {
   public void testMoveClass() {
     String scriptText = "/*abc*/ package /*abc*/a/*abc*/  ./*abc*/ b /*abc*/ ; class CCC{ static fff() {} }";
     myFixture.addFileToProject("a/b/CCC.jactl", scriptText);
-    var fileContents = new String[] {
+    String[] fileContents = new String[] {
       "a/xyz/script6.jactl", "def f(){}"
     };
-    for (var iter = Arrays.stream(fileContents).iterator(); iter.hasNext(); ) {
+    for (Iterator<String> iter = Arrays.stream(fileContents).iterator(); iter.hasNext(); ) {
       myFixture.addFileToProject(iter.next(), iter.next());
     }
     myFixture.moveFile("a/b/CCC.jactl", "a/xyz");
@@ -158,10 +159,10 @@ public class RenameMoveTests extends BasePlatformTestCase {
   public void testMoveClass2() {
     String scriptText = "/*abc*/ package /*abc*/a/*abc*/  ./*abc*/ b /*abc*/ ; class CCC{ static fff() {} }";
     myFixture.addFileToProject("a/b/CCC.jactl", scriptText);
-    var fileContents = new String[] {
+    String[] fileContents = new String[] {
       "a/script6.jactl", "def f(){}"
     };
-    for (var iter = Arrays.stream(fileContents).iterator(); iter.hasNext(); ) {
+    for (Iterator<String> iter = Arrays.stream(fileContents).iterator(); iter.hasNext(); ) {
       myFixture.addFileToProject(iter.next(), iter.next());
     }
     myFixture.moveFile("a/b/CCC.jactl", "a");
@@ -172,10 +173,10 @@ public class RenameMoveTests extends BasePlatformTestCase {
   public void testMoveClass3() {
     String scriptText = "/*abc*/ package /*abc*/a/*abc*/  ./*abc*/ b /*abc*/ ; class CCC{ static fff() {} }";
     myFixture.addFileToProject("a/b/CCC.jactl", scriptText);
-    var fileContents = new String[] {
+    String[] fileContents = new String[] {
       "a/b/c/d/script6.jactl", "def f(){}"
     };
-    for (var iter = Arrays.stream(fileContents).iterator(); iter.hasNext(); ) {
+    for (Iterator<String> iter = Arrays.stream(fileContents).iterator(); iter.hasNext(); ) {
       myFixture.addFileToProject(iter.next(), iter.next());
     }
     myFixture.moveFile("a/b/CCC.jactl", "a/b/c/d");
@@ -186,10 +187,10 @@ public class RenameMoveTests extends BasePlatformTestCase {
   public void testMoveClass4() {
     String scriptText = "/*abc*/ package /*abc*/a/*abc*/  ./*abc*/ b /*abc*/ ; class CCC{ static fff() {} }";
     myFixture.addFileToProject("a/b/CCC.jactl", scriptText);
-    var fileContents = new String[] {
+    String[] fileContents = new String[] {
       "b/c/d/script6.jactl", "def f(){}"
     };
-    for (var iter = Arrays.stream(fileContents).iterator(); iter.hasNext(); ) {
+    for (Iterator<String> iter = Arrays.stream(fileContents).iterator(); iter.hasNext(); ) {
       myFixture.addFileToProject(iter.next(), iter.next());
     }
     myFixture.moveFile("a/b/CCC.jactl", "b/c/d");
@@ -200,7 +201,7 @@ public class RenameMoveTests extends BasePlatformTestCase {
   public void testMoveClass5() {
     String scriptText = "/*xxx*/ package /*xxx*/ a /*xxx*/ . /*xxx*/ b /*xxx*/; class CCC{ class DDD{ static fff() {} }}";
     myFixture.addFileToProject("a/b/CCC.jactl", scriptText);
-    var fileContents = new String[] {
+    String[] fileContents = new String[] {
       "a/b/script.jactl",    "package a.b; new CCC.DDD(); def f() { CCC c = new CCC() }",
                              "package a.b; new a.xyz.CCC.DDD(); def f() { a.xyz.CCC c = new a.xyz.CCC() }",
       "script2.jactl",       "new /*xxx*/ a /*xxx*/ . /*xxx*/ b /*xxx*/ . /*xxx*/ CCC /*xxx*/ . /*xxx*/ DDD(); \"${new a/*xxx*/. /*xxx*/ b /*xxx*/ . /*xxx*/ CCC()}\"",
@@ -210,12 +211,12 @@ public class RenameMoveTests extends BasePlatformTestCase {
       "a/b/script5.jactl",   "package a.b; new a.b.CCC().fff()", null,
       "a/xyz/script6.jactl", "def f(){}", null
     };
-    for (var iter = Arrays.stream(fileContents).iterator(); iter.hasNext(); iter.next()) {
+    for (Iterator<String> iter = Arrays.stream(fileContents).iterator(); iter.hasNext(); iter.next()) {
       myFixture.addFileToProject(iter.next(), iter.next());
     }
     myFixture.moveFile("a/b/CCC.jactl", "a/xyz");
     verifyFile("a/xyz/CCC.jactl", "/*xxx*/ package /*xxx*/ a /*xxx*/ . /*xxx*/ xyz /*xxx*/; class CCC{ class DDD{ static fff() {} }}");
-    for (var iter = Arrays.stream(fileContents).iterator(); iter.hasNext(); ) {
+    for (Iterator<String> iter = Arrays.stream(fileContents).iterator(); iter.hasNext(); ) {
       String file = iter.next();
       String original = iter.next();
       String expected = iter.next();
@@ -226,7 +227,7 @@ public class RenameMoveTests extends BasePlatformTestCase {
   public void testMoveClass6() {
     String scriptText = "/*xxx*/ package /*xxx*/ a /*xxx*/ . /*xxx*/ b /*xxx*/; class CCC{ class DDD{ static fff() {} }}";
     myFixture.addFileToProject("a/b/CCC.jactl", scriptText);
-    var fileContents = new String[] {
+    String[] fileContents = new String[] {
       "a/b/script.jactl",    "package a.b; new CCC.DDD(); def f() { CCC c = new CCC() }",
                              "package a.b; new a.CCC.DDD(); def f() { a.CCC c = new a.CCC() }",
       "script2.jactl",       "new /*xxx*/ a /*xxx*/ . /*xxx*/ b /*xxx*/ . /*xxx*/ CCC /*xxx*/ . /*xxx*/ DDD(); \"${new a/*xxx*/. /*xxx*/ b /*xxx*/ . /*xxx*/ CCC()}\"",
@@ -236,12 +237,12 @@ public class RenameMoveTests extends BasePlatformTestCase {
       "a/b/script5.jactl",   "package a.b; new a.b.CCC().fff()", null,
       "a/script6.jactl", "def f(){}", null
     };
-    for (var iter = Arrays.stream(fileContents).iterator(); iter.hasNext(); iter.next()) {
+    for (Iterator<String> iter = Arrays.stream(fileContents).iterator(); iter.hasNext(); iter.next()) {
       myFixture.addFileToProject(iter.next(), iter.next());
     }
     myFixture.moveFile("a/b/CCC.jactl", "a");
     verifyFile("a/CCC.jactl", "/*xxx*/ package /*xxx*/ a /*xxx*/  /*xxx*/  /*xxx*/; class CCC{ class DDD{ static fff() {} }}");
-    for (var iter = Arrays.stream(fileContents).iterator(); iter.hasNext(); ) {
+    for (Iterator<String> iter = Arrays.stream(fileContents).iterator(); iter.hasNext(); ) {
       String file = iter.next();
       String original = iter.next();
       String expected = iter.next();
@@ -252,7 +253,7 @@ public class RenameMoveTests extends BasePlatformTestCase {
   public void testMoveClass7() {
     String scriptText = "/*xxx*/ package /*xxx*/ a /*xxx*/ . /*xxx*/ b /*xxx*/; class CCC{ class DDD{ static fff() {} }}";
     myFixture.addFileToProject("a/b/CCC.jactl", scriptText);
-    var fileContents = new String[] {
+    String[] fileContents = new String[] {
       "a/b/script.jactl",    "package a.b; new CCC.DDD(); def f() { CCC c = new CCC() }",
       "package a.b; new x.y.z.CCC.DDD(); def f() { x.y.z.CCC c = new x.y.z.CCC() }",
       "script2.jactl",       "new /*xxx*/ a /*xxx*/ . /*xxx*/ b /*xxx*/ . /*xxx*/ CCC /*xxx*/ . /*xxx*/ DDD(); \"${new a/*xxx*/. /*xxx*/ b /*xxx*/ . /*xxx*/ CCC()}\"",
@@ -262,12 +263,12 @@ public class RenameMoveTests extends BasePlatformTestCase {
       "a/b/script5.jactl",   "package a.b; new a.b.CCC().fff()", null,
       "x/y/z/script6.jactl", "def f(){}", null
     };
-    for (var iter = Arrays.stream(fileContents).iterator(); iter.hasNext(); iter.next()) {
+    for (Iterator<String> iter = Arrays.stream(fileContents).iterator(); iter.hasNext(); iter.next()) {
       myFixture.addFileToProject(iter.next(), iter.next());
     }
     myFixture.moveFile("a/b/CCC.jactl", "x/y/z");
     verifyFile("x/y/z/CCC.jactl", "/*xxx*/ package /*xxx*/ x /*xxx*/ . /*xxx*/ y.z /*xxx*/; class CCC{ class DDD{ static fff() {} }}");
-    for (var iter = Arrays.stream(fileContents).iterator(); iter.hasNext(); ) {
+    for (Iterator<String> iter = Arrays.stream(fileContents).iterator(); iter.hasNext(); ) {
       String file = iter.next();
       String original = iter.next();
       String expected = iter.next();
@@ -278,7 +279,7 @@ public class RenameMoveTests extends BasePlatformTestCase {
   public void testMoveClass8() {
     String scriptText = "/*xxx*/ package /*xxx*/ a /*xxx*/ . /*xxx*/ b /*xxx*/; class CCC{ class DDD{ static fff() {} }}";
     myFixture.addFileToProject("a/b/CCC.jactl", scriptText);
-    var fileContents = new String[] {
+    String[] fileContents = new String[] {
       "a/b/script.jactl",    "package a.b; new CCC.DDD(); def f() { CCC c = new CCC() }",
       "package a.b; new CCC.DDD(); def f() { CCC c = new CCC() }",
       "script2.jactl",       "new /*xxx*/ a /*xxx*/ . /*xxx*/ b /*xxx*/ . /*xxx*/ CCC /*xxx*/ . /*xxx*/ DDD(); \"${new a/*xxx*/. /*xxx*/ b /*xxx*/ . /*xxx*/ CCC()}\"",
@@ -288,12 +289,12 @@ public class RenameMoveTests extends BasePlatformTestCase {
       "a/b/script5.jactl",   "package a.b; new a.b.CCC().fff()", null,
       "x/y/z/script6.jactl", "def f(){}", null
     };
-    for (var iter = Arrays.stream(fileContents).iterator(); iter.hasNext(); iter.next()) {
+    for (Iterator<String> iter = Arrays.stream(fileContents).iterator(); iter.hasNext(); iter.next()) {
       myFixture.addFileToProject(iter.next(), iter.next());
     }
     myFixture.moveFile("a/b/CCC.jactl", "");
     verifyFile("CCC.jactl", "/*xxx*/ " + JactlMoveFileHandler.PACKAGE_REMOVAL_COMMENT + " /*xxx*/  /*xxx*/  /*xxx*/  /*xxx*/; class CCC{ class DDD{ static fff() {} }}");
-    for (var iter = Arrays.stream(fileContents).iterator(); iter.hasNext(); ) {
+    for (Iterator<String> iter = Arrays.stream(fileContents).iterator(); iter.hasNext(); ) {
       String file = iter.next();
       String original = iter.next();
       String expected = iter.next();
@@ -304,11 +305,11 @@ public class RenameMoveTests extends BasePlatformTestCase {
   public void testMoveClass9() {
     String scriptText = "package a.b; class CCC{ static fff() {} }";
     myFixture.addFileToProject("a/b/CCC.jactl", scriptText);
-    var fileContents = new String[] {
+    String[] fileContents = new String[] {
       "a/b/script.jactl",    "package a.b; new CCC(); def f() { CCC c; c.fff() }",
       "a/xyz/script6.jactl", "def f(){}"
     };
-    for (var iter = Arrays.stream(fileContents).iterator(); iter.hasNext(); ) {
+    for (Iterator<String> iter = Arrays.stream(fileContents).iterator(); iter.hasNext(); ) {
       myFixture.addFileToProject(iter.next(), iter.next());
     }
     myFixture.moveFile("a/b/CCC.jactl", "a/xyz");
@@ -317,9 +318,9 @@ public class RenameMoveTests extends BasePlatformTestCase {
   }
 
   public void testRenamePackage() {
-    String scriptText = "/*xxx*/ package /*xxx*/ a /*xxx*/ . /*xxx*/ b /*xxx*/; class CCC{ class DDD{ static fff() {} }}";
-    var classFile = myFixture.addFileToProject("a/b/CCC.jactl", scriptText);
-    var fileContents = new String[] {
+    String  scriptText = "/*xxx*/ package /*xxx*/ a /*xxx*/ . /*xxx*/ b /*xxx*/; class CCC{ class DDD{ static fff() {} }}";
+    PsiFile classFile  = myFixture.addFileToProject("a/b/CCC.jactl", scriptText);
+    String[] fileContents = new String[] {
       "a/b/script.jactl",    "package a.b; new CCC.DDD(); def f() { CCC c = new CCC() }", null,
       "a/b/DDD.jactl",       "package a.b; class DDD { def f() { CCC c = new CCC() } }", null,
       "script2.jactl",       "new /*xxx*/ a /*xxx*/ . /*xxx*/ b /*xxx*/ . /*xxx*/ CCC /*xxx*/ . /*xxx*/ DDD(); \"${new a/*xxx*/. /*xxx*/ b /*xxx*/ . /*xxx*/ CCC()}\"",
@@ -329,13 +330,13 @@ public class RenameMoveTests extends BasePlatformTestCase {
       "script5.jactl",       "a.b.CCC.DDD.fff()", null,
       "x/y/z/script6.jactl", "def f(){}", null
     };
-    for (var iter = Arrays.stream(fileContents).iterator(); iter.hasNext(); iter.next()) {
+    for (Iterator<String> iter = Arrays.stream(fileContents).iterator(); iter.hasNext(); iter.next()) {
       myFixture.addFileToProject(iter.next(), iter.next());
     }
     assert classFile.getParent() != null;
     myFixture.renameElement(classFile.getParent(), "xyz");
     verifyFile("a/xyz/CCC.jactl", "/*xxx*/ package /*xxx*/ a /*xxx*/ . /*xxx*/ xyz /*xxx*/; class CCC{ class DDD{ static fff() {} }}");
-    for (var iter = Arrays.stream(fileContents).iterator(); iter.hasNext(); ) {
+    for (Iterator<String> iter = Arrays.stream(fileContents).iterator(); iter.hasNext(); ) {
       String file = iter.next().replaceAll("a/b", "a/xyz");
       String original = iter.next();
       String expected = iter.next();
@@ -344,17 +345,17 @@ public class RenameMoveTests extends BasePlatformTestCase {
   }
 
   public void testMovePackage() {
-    var fileContents = new String[] {
+    String[] fileContents = new String[] {
       "a/b/c/CCC.jactl",     "package a.b.c; class CCC{ static def fff() {} }", null,
       "a/b/c/DDD.jactl",     "package a.b.c; class DDD { static def ggg() { a.b.c.CCC.fff() } }", null,
       "a/b/EEE.jactl",       "package a.b; class EEE { static def hhh() { a.b.c.CCC.fff() } }", null,
       "script5.jactl",       "a.b.CCC.fff()", null,
     };
-    for (var iter = Arrays.stream(fileContents).iterator(); iter.hasNext(); iter.next()) {
+    for (Iterator<String> iter = Arrays.stream(fileContents).iterator(); iter.hasNext(); iter.next()) {
       myFixture.addFileToProject(iter.next(), iter.next());
     }
     moveDirectory("a/b/c", "a");
-    for (var iter = Arrays.stream(fileContents).iterator(); iter.hasNext(); ) {
+    for (Iterator<String> iter = Arrays.stream(fileContents).iterator(); iter.hasNext(); ) {
       String file = iter.next().replaceAll("a/b/c", "a/c");
       String original = iter.next();
       String expected = iter.next();
@@ -372,13 +373,13 @@ public class RenameMoveTests extends BasePlatformTestCase {
       "a/b/script4.jactl", "package a.b; new a.b.CCC().fff()",
       "script5.jactl",     "import a.b.CCC; new CCC().fff()"
     };
-    for (var iter = Arrays.stream(fileContents).iterator(); iter.hasNext(); ) {
+    for (Iterator<String> iter = Arrays.stream(fileContents).iterator(); iter.hasNext(); ) {
       myFixture.addFileToProject(iter.next(), iter.next());
     }
     myFixture.configureByFiles("a/b/CCC.jactl");
     myFixture.renameElementAtCaret("ggg");
     verifyFile("a/b/CCC.jactl", renamedText(cccText, "fff", "ggg"));
-    for (var iter = Arrays.stream(fileContents).iterator(); iter.hasNext(); ) {
+    for (Iterator<String> iter = Arrays.stream(fileContents).iterator(); iter.hasNext(); ) {
       verifyFile(iter.next(), renamedText(iter.next(), "fff", "ggg"));
     }
   }
@@ -393,13 +394,13 @@ public class RenameMoveTests extends BasePlatformTestCase {
       "a/b/script4.jactl", "package a.b; a.b.CCC.fff()",
       "script5.jactl", "import static a.b.CCC.fff as F; F()"
     };
-    for (var iter = Arrays.stream(fileContents).iterator(); iter.hasNext(); ) {
+    for (Iterator<String> iter = Arrays.stream(fileContents).iterator(); iter.hasNext(); ) {
       myFixture.addFileToProject(iter.next(), iter.next());
     }
     myFixture.configureByFiles("a/b/CCC.jactl");
     myFixture.renameElementAtCaret("ggg");
     verifyFile("a/b/CCC.jactl", renamedText(cccText, "fff", "ggg"));
-    for (var iter = Arrays.stream(fileContents).iterator(); iter.hasNext(); ) {
+    for (Iterator<String> iter = Arrays.stream(fileContents).iterator(); iter.hasNext(); ) {
       verifyFile(iter.next(), renamedText(iter.next(), "fff", "ggg"));
     }
   }
@@ -411,13 +412,13 @@ public class RenameMoveTests extends BasePlatformTestCase {
       "script.jactl", "import a.b.CCC; CCC.EEE.fff()",
       "script2.jactl", "import a.b.CCC; CCC.EEE eee = new CCC.EEE(); eee.fff()"
     };
-    for (var iter = Arrays.stream(fileContents).iterator(); iter.hasNext(); ) {
+    for (Iterator<String> iter = Arrays.stream(fileContents).iterator(); iter.hasNext(); ) {
       myFixture.addFileToProject(iter.next(), iter.next());
     }
     myFixture.configureByFiles("a/b/CCC.jactl");
     myFixture.renameElementAtCaret("ggg");
     verifyFile("a/b/CCC.jactl", renamedText(cccText, "fff", "ggg"));
-    for (var iter = Arrays.stream(fileContents).iterator(); iter.hasNext(); ) {
+    for (Iterator<String> iter = Arrays.stream(fileContents).iterator(); iter.hasNext(); ) {
       verifyFile(iter.next(), renamedText(iter.next(), "fff", "ggg"));
     }
   }
@@ -429,13 +430,13 @@ public class RenameMoveTests extends BasePlatformTestCase {
       "script2.jactl", "import a.b.CCC; CCC.DDD.EEE eee = new CCC.DDD.EEE(); eee.fff()"
     };
     myFixture.addFileToProject("a/b/CCC.jactl", cccText);
-    for (var iter = Arrays.stream(fileContents).iterator(); iter.hasNext(); ) {
+    for (Iterator<String> iter = Arrays.stream(fileContents).iterator(); iter.hasNext(); ) {
       myFixture.addFileToProject(iter.next(), iter.next());
     }
     myFixture.configureByFiles("a/b/CCC.jactl");
     myFixture.renameElementAtCaret("ggg");
     verifyFile("a/b/CCC.jactl", renamedText(cccText, "fff", "ggg"));
-    for (var iter = Arrays.stream(fileContents).iterator(); iter.hasNext(); ) {
+    for (Iterator<String> iter = Arrays.stream(fileContents).iterator(); iter.hasNext(); ) {
       verifyFile(iter.next(), renamedText(iter.next(), "fff", "ggg"));
     }
   }
@@ -475,13 +476,13 @@ public class RenameMoveTests extends BasePlatformTestCase {
       "a/b/script4.jactl", "package a.b; new a.b.CCC().fff",
       "script5.jactl", "import a.b.CCC; new CCC().fff"
     };
-    for (var iter = Arrays.stream(fileContents).iterator(); iter.hasNext(); ) {
+    for (Iterator<String> iter = Arrays.stream(fileContents).iterator(); iter.hasNext(); ) {
       myFixture.addFileToProject(iter.next(), iter.next());
     }
     myFixture.configureByFiles("a/b/CCC.jactl");
     myFixture.renameElementAtCaret("ggg");
     verifyFile("a/b/CCC.jactl", renamedText(cccText, "fff", "ggg"));
-    for (var iter = Arrays.stream(fileContents).iterator(); iter.hasNext(); ) {
+    for (Iterator<String> iter = Arrays.stream(fileContents).iterator(); iter.hasNext(); ) {
       verifyFile(iter.next(), renamedText(iter.next(), "fff", "ggg"));
     }
   }
@@ -498,13 +499,13 @@ public class RenameMoveTests extends BasePlatformTestCase {
       "a/b/script6.jactl", "package a.b; CCC.fff",
       "script7.jactl", "import a.b.CCC; CCC.fff"
     };
-    for (var iter = Arrays.stream(fileContents).iterator(); iter.hasNext(); ) {
+    for (Iterator<String> iter = Arrays.stream(fileContents).iterator(); iter.hasNext(); ) {
       myFixture.addFileToProject(iter.next(), iter.next());
     }
     myFixture.configureByFiles("a/b/CCC.jactl");
     myFixture.renameElementAtCaret("ggg");
     verifyFile("a/b/CCC.jactl", renamedText(cccText, "fff", "ggg"));
-    for (var iter = Arrays.stream(fileContents).iterator(); iter.hasNext(); ) {
+    for (Iterator<String> iter = Arrays.stream(fileContents).iterator(); iter.hasNext(); ) {
       verifyFile(iter.next(), renamedText(iter.next(), "fff", "ggg"));
     }
   }

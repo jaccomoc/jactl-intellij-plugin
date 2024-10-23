@@ -23,13 +23,15 @@ public class JactlPsiIdentifierImpl extends LeafPsiElement implements JactlPsiId
   }
 
   public JactlAstKey getAstKey() {
-    if (getParent() instanceof JactlPsiIdentifierExprImpl parent) {
+    if (getParent() instanceof JactlPsiIdentifierExprImpl) {
+      JactlPsiIdentifierExprImpl parent = (JactlPsiIdentifierExprImpl) getParent();
       return parent.getAstKey();
     }
     if (getParent().getNode().getElementType() == JactlExprElementType.CLASS_PATH_EXPR) {
       return ((JactlPsiElement)getParent()).getAstKey();
     }
-    if (getParent() instanceof JactlPsiTypeImpl type) {
+    if (getParent() instanceof JactlPsiTypeImpl) {
+      JactlPsiTypeImpl type = (JactlPsiTypeImpl) getParent();
       return type.getAstKey();
     }
     return new JactlAstKey(getFile(), getNode().getElementType(), getNode().getStartOffset());
@@ -40,7 +42,8 @@ public class JactlPsiIdentifierImpl extends LeafPsiElement implements JactlPsiId
     // If we are already a type of name (e.g. class or variable) then we don't refer to anything.
     // Only exception is for packages where we want the identifier to refer to the PsiDirectory for
     // the package.
-    if (parent instanceof JactlPsiName psiName) {
+    if (parent instanceof JactlPsiName) {
+      JactlPsiName psiName = (JactlPsiName) parent;
       if (psiName.getType() == JactlNameElementType.PACKAGE) {
         return new JactlPackageReference(this);
       }

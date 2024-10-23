@@ -28,7 +28,7 @@ public class JactlCachedValue<T> {
   }
 
   public T getValue() {
-    var localRef = value;
+    T localRef = value;
     if (localRef == null) {
       synchronized (this) {
         localRef = value;

@@ -38,7 +38,7 @@ public class JactlParserAdapter implements PsiParser {
 
   private static final int CACHE_SIZE = 100;
 
-  private static final Map<JactlFile,ParsedScript> parsedScripts = new LinkedHashMap<>(CACHE_SIZE * 2, 0.75f, true) {
+  private static final Map<JactlFile,ParsedScript> parsedScripts = new LinkedHashMap<JactlFile, ParsedScript>(CACHE_SIZE * 2, 0.75f, true) {
     @Override protected boolean removeEldestEntry(Map.Entry<JactlFile,ParsedScript> eldest) { return size() > CACHE_SIZE; }
   };
 
@@ -82,7 +82,7 @@ public class JactlParserAdapter implements PsiParser {
       //List<JactlTokenBuilder.Event> events = tokeniser.getEvents().stream().filter(Predicate.not(JactlTokenBuilder.Event::isDropped)).toList();
       List<JactlTokenBuilder.Event> events = tokeniser.getEvents();
       for (int i = 0; i < events.size(); i++) {
-        var event = events.get(i);
+        JactlTokenBuilder.Event event = events.get(i);
         if (event.isDropped()) {
           continue;
         }
@@ -106,7 +106,7 @@ public class JactlParserAdapter implements PsiParser {
             // Find next non-whitespace/non-comment token in order to get offset
             marker.offset = -1;
             for (int j = i; j < events.size(); j++) {
-              var token = events.get(j);
+              JactlTokenBuilder.Event token = events.get(j);
               if (token.isToken() && !token.getToken().isCommentOrWhiteSpace()) {
                 marker.offset = token.getToken().getOffset();
                 break;
@@ -117,7 +117,7 @@ public class JactlParserAdapter implements PsiParser {
             }
 
             if (marker.type == JactlStmtElementType.FUN_DECL ||
-                marker.type == JactlStmtElementType.CLASS_DECL && marker.astNode instanceof Stmt.ClassDecl classDecl && !classDecl.isScriptClass()) {
+                marker.type == JactlStmtElementType.CLASS_DECL && marker.astNode instanceof Stmt.ClassDecl && !((Stmt.ClassDecl) marker.astNode).isScriptClass()) {
               // Find first name as this will be location we want to jump to when jumping to declaration
               marker.nameKey = IntStream.range(i, events.size())
                                         .mapToObj(events::get)
@@ -138,16 +138,19 @@ public class JactlParserAdapter implements PsiParser {
 
             // Special case for Stmt.VarDecl and Stmt.FunDecl since resolver resolves to the Expr.VarDecl inside it we need
             // to make the Expr.VarDecl point back to the Stmt.VarDecl
-            if (marker.astNode instanceof Stmt.VarDecl stmt) {
+            if (marker.astNode instanceof Stmt.VarDecl) {
+              Stmt.VarDecl stmt = (Stmt.VarDecl) marker.astNode;
               stmt.declExpr.setUserData(new JactlAstKey(file, marker.type, marker.offset));
             }
-            else if (marker.astNode instanceof Stmt.FunDecl stmt) {
+            else if (marker.astNode instanceof Stmt.FunDecl) {
+              Stmt.FunDecl stmt = (Stmt.FunDecl) marker.astNode;
               if (marker.nameKey == null) {
                 LOG.warn("No name found for function declaration: funDecl=" + marker.astNode);
               }
               stmt.declExpr.varDecl.setUserData(marker.nameKey);
             }
-            else if (marker.astNode instanceof Stmt.ClassDecl classDecl && !classDecl.isScriptClass()) {
+            else if (marker.astNode instanceof Stmt.ClassDecl && !((Stmt.ClassDecl) marker.astNode).isScriptClass()) {
+              Stmt.ClassDecl classDecl = (Stmt.ClassDecl) marker.astNode;
               if (marker.nameKey == null) {
                 LOG.warn("No name found for class declaration: classDecl=" + marker.astNode);
               }
@@ -196,7 +199,19 @@ public class JactlParserAdapter implements PsiParser {
     return parsed;
   }
 
-  public record FieldDescriptor(String name, JactlType type, boolean isStatic) {}
+  public static final class FieldDescriptor {
+    private final String    name;
+    private final JactlType type;
+    private final boolean   isStatic;
+    public FieldDescriptor(String name, JactlType type, boolean isStatic) {
+      this.name = name;
+      this.type = type;
+      this.isStatic = isStatic;
+    }
+    public String name()      { return name; }
+    public JactlType type()   { return type; }
+    public boolean isStatic() { return isStatic; }
+  }
 
   /**
    * Return list of variables/fields (as FieldDescriptor) and functions (FunctionDescriptors)
@@ -222,8 +237,8 @@ public class JactlParserAdapter implements PsiParser {
   }
 
   public static JactlUserDataHolder getJactlAstNode(JactlFile file, String sourceCode, JactlAstKey astKey) {
-    ParsedScript parsed = getParsedScript(astKey.getFile(), sourceCode);
-    var result = parsed.getJactlAstNode(astKey);
+    ParsedScript        parsed = getParsedScript(astKey.getFile(), sourceCode);
+    JactlUserDataHolder result = parsed.getJactlAstNode(astKey);
     return result;
   }
 
@@ -232,7 +247,7 @@ public class JactlParserAdapter implements PsiParser {
   }
 
   public static ClassDescriptor getClass(JactlPsiElement element) {
-    var key = element.getAstKey();
+    JactlAstKey key = element.getAstKey();
     if (key != null) {
       return getClass(key.getFile(), element.getSourceCode(), key);
     }
@@ -248,7 +263,7 @@ public class JactlParserAdapter implements PsiParser {
   }
 
   public static Stmt.ClassDecl getClassDecl(Project project, String fqClassName) {
-    var file = JactlUtils.findFileForClass(project, fqClassName);
+    JactlFile file = JactlUtils.findFileForClass(project, fqClassName);
     if (file == null) {
       return null;
     }
@@ -256,7 +271,7 @@ public class JactlParserAdapter implements PsiParser {
   }
 
   public static boolean isImported(JactlPsiElement className) {
-    var parser = getParsedScript(className.getFile(), className.getSourceCode());
+    ParsedScript parser = getParsedScript(className.getFile(), className.getSourceCode());
     return parser.resolver.getImports().containsKey(className.getText());
   }
 
@@ -298,7 +313,7 @@ public class JactlParserAdapter implements PsiParser {
     }
 
     public JactlUserDataHolder getJactlAstNode(JactlAstKey astKey) {
-      var result = jactlAstNodes.get(astKey);
+      JactlUserDataHolder result = jactlAstNodes.get(astKey);
       if (result == null) {
         LOG.info("Returning null for AST Node: key=" + astKey);
       }
@@ -319,10 +334,11 @@ public class JactlParserAdapter implements PsiParser {
       if (astNode == null) {
         return Collections.EMPTY_LIST;
       }
-      if (!(astNode instanceof Expr.Identifier expr)) {
+      if (!(astNode instanceof Expr.Identifier)) {
         LOG.warn("Completions not possible for node of type " + astNode.getClass().getName());
         return Collections.EMPTY_LIST;
       }
+      Expr.Identifier expr = (Expr.Identifier) astNode;
 
       Stmt.Block block = expr.getBlock();
 
@@ -404,7 +420,8 @@ public class JactlParserAdapter implements PsiParser {
         return null;
       }
       Stmt.Block block = astNode.getBlock();
-      if (block == null && astNode instanceof Stmt.FunDecl funDecl) {
+      if (block == null && astNode instanceof Stmt.FunDecl) {
+        Stmt.FunDecl funDecl = (Stmt.FunDecl) astNode;
         block = funDecl.declExpr.block;
       }
       return block;
