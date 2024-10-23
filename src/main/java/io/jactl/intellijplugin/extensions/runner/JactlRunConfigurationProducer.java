@@ -28,6 +28,9 @@ import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.psi.PsiElement;
 import io.jactl.intellijplugin.JactlFile;
 import io.jactl.intellijplugin.JactlUtils;
+import io.jactl.intellijplugin.extensions.settings.JactlConfigurable;
+import io.jactl.intellijplugin.extensions.settings.JactlConfiguration;
+import io.jactl.intellijplugin.jpsplugin.builder.JpsJactlSettings;
 import io.jactl.intellijplugin.psi.JactlNameElementType;
 import io.jactl.intellijplugin.psi.impl.JactlPsiNameImpl;
 import org.jetbrains.annotations.NotNull;
@@ -61,6 +64,8 @@ public class JactlRunConfigurationProducer extends LazyRunConfigurationProducer<
       configuration.setName(virtualFile.getName());
       configuration.setScriptPath(virtualFile.getCanonicalPath());
       configuration.setModule(ModuleUtilCore.findModuleForPsiElement(jactlFile));
+      configuration.setGlobalVariablesScript(JactlConfiguration.getInstance(configuration.getProject()).getGlobalVariablesScript());
+      configuration.setVerboseEnabled(JactlConfiguration.getInstance(configuration.getProject()).isVerboseEnabled());
       return true;
     }
     return false; // Not a Jactl file

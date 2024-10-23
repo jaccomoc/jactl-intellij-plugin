@@ -22,6 +22,7 @@ import com.intellij.execution.ui.CommonJavaParametersPanel;
 import com.intellij.execution.ui.DefaultJreSelector;
 import com.intellij.execution.ui.JrePathEditor;
 import com.intellij.execution.util.ScriptFileUtil;
+import com.intellij.openapi.fileChooser.FileChooserDescriptor;
 import com.intellij.openapi.fileChooser.FileChooserDescriptorFactory;
 import com.intellij.openapi.options.SettingsEditor;
 import com.intellij.openapi.project.Project;
@@ -34,6 +35,7 @@ import com.intellij.ui.DocumentAdapter;
 import com.intellij.ui.PanelWithAnchor;
 import com.intellij.util.ui.UIUtil;
 import io.jactl.intellijplugin.JactlFileType;
+import io.jactl.intellijplugin.JactlUtils;
 import io.jactl.intellijplugin.common.JactlBundle;
 import kotlin.jvm.functions.Function0;
 import org.jetbrains.annotations.NotNull;
@@ -48,10 +50,10 @@ public class JactlRunConfigurationEditor extends SettingsEditor<JactlRunConfigur
   private CommonJavaParametersPanel                   javaParametersPanel;
   private LabeledComponent<ModulesComboBox>           modulesComboBoxComponent;
   private JrePathEditor                               jrePathEditor;
+  private JCheckBox                                   verbose;
+  private TextFieldWithBrowseButton                   globalVariablesScript;
 
   private JComponent                                  anchor;
-
-  //private void createUIComponents() {}
 
   public JactlRunConfigurationEditor(Project project) {
     anchor = UIUtil.mergeComponentsWithAnchor(scriptPathComponent, javaParametersPanel, modulesComboBoxComponent, jrePathEditor);
@@ -79,6 +81,11 @@ public class JactlRunConfigurationEditor extends SettingsEditor<JactlRunConfigur
           });
         }
       });
+
+    globalVariablesScript.addBrowseFolderListener(JactlBundle.message("jactl.configuration.globals.script.selector.title"), JactlBundle.message("jactl.configuration.globals.script.selector.description"),
+                                                  project,
+                                                  new FileChooserDescriptor(true, false, false, false, false, false)
+                                                    .withRoots(JactlUtils.getSourceRootFiles(project)));
   }
 
   @Override
@@ -88,6 +95,8 @@ public class JactlRunConfigurationEditor extends SettingsEditor<JactlRunConfigur
     modulesComboBoxComponent.getComponent().setModules(config.getValidModules());
     modulesComboBoxComponent.getComponent().setSelectedModule(config.getConfigurationModule().getModule());
     jrePathEditor.setPathOrName(config.getAlternativeJrePath(), config.isAlternativeJrePathEnabled());
+    globalVariablesScript.setText(config.getGlobalVariablesScript());
+    verbose.setSelected(config.isVerboseEnabled());
   }
 
   @Override
@@ -97,6 +106,8 @@ public class JactlRunConfigurationEditor extends SettingsEditor<JactlRunConfigur
     config.setModule(modulesComboBoxComponent.getComponent().getSelectedModule());
     config.setAlternativeJrePathEnabled(jrePathEditor.isAlternativeJreSelected());
     config.setAlternativeJrePath(jrePathEditor.getJrePathOrName());
+    config.setGlobalVariablesScript(globalVariablesScript.getText());
+    config.setVerboseEnabled(verbose.isSelected());
   }
 
   @Override

@@ -66,7 +66,7 @@ public class JactlTokeniser extends Lexer {
     this.endOffset   = endOffset;
     tokeniser        = new Tokeniser(charSequence.toString(), true);
     jactlBuilder     = new JactlTokenBuilder(tokeniser);
-    jactlContext     = createJactlContext();
+    jactlContext     = JactlUtils.createJactlContext(project);
 
     // We don't know directory or file name so for the moment use dummy package/class names
     Parser parser    = new Parser(jactlBuilder, jactlContext, "");
@@ -149,61 +149,5 @@ public class JactlTokeniser extends Lexer {
     @Override public int getState() {
       return 0;
     }
-  }
-
-  private JactlContext createJactlContext() {
-    if (project == null) {
-      return JactlContext.create().evaluateConstExprs(false).build();
-    }
-    String baseJavaPkg = JactlPlugin.BASE_JACTL_PKG;
-    String baseJavaPkgFile = baseJavaPkg.replace('.', File.separatorChar);
-    return JactlContext.create()
-                       .javaPackage(baseJavaPkg)
-                       .evaluateConstExprs(false)
-                       .idePlugin(true)
-                       .packageChecker(pkgName -> {
-                         var pkgs = JactlUtils.pkgNames(project);
-                         return pkgs.contains(pkgName);
-                       })
-                       .classLookup(name -> lookup(name, baseJavaPkgFile, project))
-                       .build();
-  }
-
-  /**
-   * Get ClassDecriptor for given class name
-   * @param name             name of the class (jactl/pkg/x/y/z/A$B$C)
-   * @param baseJavaPkgFile  base java package in file format (jactl/pkg)
-   * @param project          the project
-   * @return the ClassDescriptor or null
-   */
-  private ClassDescriptor lookup(String name, String baseJavaPkgFile, Project project) {
-    if (name.startsWith(baseJavaPkgFile)) {
-      name = name.substring(baseJavaPkgFile.length() + 1);
-    }
-    else {
-      LOG.warn("Class lookup name does not start with expected java package name (name=" + name + ")");
-    }
-
-    var file = JactlUtils.findFileForClassPath(project, name);
-    if (file == null) {
-      return null;
-    }
-
-    // Strip package name
-    int    idx       = name.lastIndexOf('/');
-    String className = idx == -1 ? name : name.substring(idx + 1);
-//    if (className.startsWith(JactlPlugin.SCRIPT_PREFIX)) {
-//      className = className.substring(JactlPlugin.SCRIPT_PREFIX.length());
-//      className.replace('$', '.');               // Turn A$B$C back into A.B.C
-//      className = JactlPlugin.SCRIPT_PREFIX + className;
-//    }
-//    else {
-//      className.replace('$', '.');               // Turn A$B$C back into A.B.C
-//    }
-    Stmt.ClassDecl classDecl = JactlParserAdapter.getClassDecl(file, file.getText(), className);
-    if (classDecl == null) {
-      return null;
-    }
-    return classDecl.classDescriptor;
   }
 }

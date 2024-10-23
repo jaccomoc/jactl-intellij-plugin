@@ -26,7 +26,13 @@
   <!-- Extension points defined by the plugin.
        Read more: https://plugins.jetbrains.com/docs/intellij/plugin-extension-points.html -->
   <extensions defaultExtensionNs="com.intellij">
-    <fileType name="Jactl File"    implementationClass="io.jactl.intellijplugin.JactlFileType" fieldName="INSTANCE" language="Jactl" extensions="jactl"/>
+    <projectConfigurable groupId="language"
+                         bundle="messages.JactlBundle"
+                         key="jactl.configuration.settings.display.name"
+                         id="preferences.Jactl"
+                         instance="io.jactl.intellijplugin.extensions.settings.JactlConfigurable"/>
+
+    <fileType name="Jactl File" implementationClass="io.jactl.intellijplugin.JactlFileType" fieldName="INSTANCE" language="Jactl" extensions="jactl"/>
     <lang.parserDefinition         language="Jactl" implementationClass="io.jactl.intellijplugin.JactlParserDefinition"/>
     <colorSettingsPage             implementation="io.jactl.intellijplugin.extensions.JactlColorSettingsPage"/>
     <lang.syntaxHighlighterFactory language="Jactl" implementationClass="io.jactl.intellijplugin.extensions.JactlSyntaxHighLighterFactory"/>
@@ -51,4 +57,8 @@
     <debugger.positionManagerFactory   implementation="io.jactl.intellijplugin.extensions.debugger.JactlPositionManagerFactory" />
     <debuggerClassFilterProvider       implementation="io.jactl.intellijplugin.extensions.debugger.JactlDebuggerClassFilterProvider" />
   </extensions>
+
+  <projectListeners>
+    <listener class="io.jactl.intellijplugin.extensions.JactlFileOpenListener" topic="com.intellij.openapi.fileEditor.FileEditorManagerListener" />
+  </projectListeners>
 </idea-plugin>

@@ -79,7 +79,14 @@ public class JactlBuildTarget extends BuildTarget<JactlBuildRootDescriptor> {
 
   @Override
   public @NotNull Collection<File> getOutputRoots(@NotNull CompileContext compileContext) {
-    return List.of(JpsJavaExtensionService.getInstance().getOutputDirectory(module, isTests()));
+    JpsJavaExtensionService instance = JpsJavaExtensionService.getInstance();
+    if (instance != null) {
+      File outputDirectory = instance.getOutputDirectory(module, isTests());
+      if (outputDirectory != null) {
+        return List.of(outputDirectory);
+      }
+    }
+    return List.of();
   }
 
   public static final Type PRODUCTION = new Type(false);

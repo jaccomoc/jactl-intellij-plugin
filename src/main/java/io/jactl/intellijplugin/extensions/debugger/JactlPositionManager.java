@@ -66,9 +66,7 @@ public class JactlPositionManager implements PositionManager {
         fileName = fileName.substring(JactlPlugin.SCRIPT_PREFIX.length());
         filePath = pkgPath.isEmpty() ? fileName : pkgPath + File.separator + fileName;
       }
-      if (filePath.startsWith(JactlPlugin.BASE_JACTL_PKG_PATH)) {
-        filePath = filePath.substring(JactlPlugin.BASE_JACTL_PKG_PATH.length() + 1);
-      }
+      filePath = JactlPlugin.stripSeparatedPrefix(filePath, JactlPlugin.BASE_JACTL_PKG_PATH, File.separator);
       var fileType = FileTypeRegistry.getInstance().getFileTypeByFileName(fileName);
       if (fileType instanceof LanguageFileType lfileType && lfileType.getLanguage() == JactlLanguage.INSTANCE) {
         int lineNum = DebuggerUtilsEx.getLineNumber(location, true);

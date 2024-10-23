@@ -3,13 +3,20 @@ package io.jactl.intellijplugin;
 import com.intellij.codeInsight.completion.CompletionUtilCore;
 import com.intellij.lang.*;
 import com.intellij.lang.impl.PsiBuilderImpl;
+import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.diagnostic.Logger;
+import com.intellij.openapi.fileEditor.FileEditorManager;
 import com.intellij.openapi.progress.ProgressIndicatorProvider;
 import com.intellij.openapi.project.Project;
+import com.intellij.openapi.util.Key;
+import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.psi.impl.source.resolve.FileContextUtil;
 import com.intellij.psi.tree.IElementType;
+import com.intellij.util.FileContentUtil;
 import io.jactl.*;
 import io.jactl.intellijplugin.common.JactlPlugin;
+import io.jactl.intellijplugin.jpsplugin.builder.GlobalsException;
+import io.jactl.intellijplugin.extensions.settings.JactlConfiguration;
 import io.jactl.intellijplugin.psi.*;
 import io.jactl.resolver.Resolver;
 import io.jactl.runtime.ClassDescriptor;
@@ -18,7 +25,6 @@ import org.jetbrains.annotations.NotNull;
 import java.util.*;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
-import java.util.function.Predicate;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
@@ -27,6 +33,8 @@ import static io.jactl.intellijplugin.psi.JactlListElementType.LIST;
 public class JactlParserAdapter implements PsiParser {
 
   public static final Logger LOG = Logger.getInstance(JactlParserAdapter.class);
+
+  private static final Key<Long> LAST_REFRESH = Key.create("LAST_REFRESH");
 
   private static final int CACHE_SIZE = 100;
 
@@ -235,8 +243,8 @@ public class JactlParserAdapter implements PsiParser {
     return getParsedScript(astKey.getFile(), sourceCode).getClass(file.getProject(), astKey);
   }
 
-  public static List<String> getErrors(JactlFile file, String sourceCode, int offset) {
-    return getParsedScript(file, sourceCode).getErrors(offset);
+  public static List<String> getErrors(JactlFile file, String sourceCode, ASTNode node) {
+    return getParsedScript(file, sourceCode).getErrors(node);
   }
 
   public static Stmt.ClassDecl getClassDecl(Project project, String fqClassName) {
@@ -260,6 +268,8 @@ public class JactlParserAdapter implements PsiParser {
     Stmt.ClassDecl                        jactlAst;
     JactlContext                          jactlContext;
     Resolver                              resolver;
+    GlobalsException                      globalsError;
+    int                                   firstAstNodeOffset = Integer.MAX_VALUE;
     Map<Integer, List<String>>            errors        = new HashMap<>();
 
     ParsedScript(Stmt.ClassDecl jactlAst, JactlContext jactlContext, String sourceCode) {
@@ -274,6 +284,9 @@ public class JactlParserAdapter implements PsiParser {
 
     public void addASTNode(JactlFile file, IElementType type, int offset, JactlUserDataHolder node) {
       JactlAstKey key = new JactlAstKey(file, type, offset);
+      if (offset < firstAstNodeOffset) {
+        firstAstNodeOffset = offset;
+      }
       jactlAstNodes.put(key, node);
       if (node != null) {
         node.setUserData(key);
@@ -430,14 +443,40 @@ public class JactlParserAdapter implements PsiParser {
       return result;
     }
 
-    public List<String> getErrors(int offset) {
-       return errors.getOrDefault(offset, Collections.EMPTY_LIST);
+    public List<String> getErrors(ASTNode node) {
+      // Find innermost node at same offset and only report errors on that one to avoid
+      // multiple errors at same offset
+      int offset = node.getStartOffset();
+      ASTNode firstChildNode = node.getFirstChildNode();
+      if (firstChildNode != null && firstChildNode.getStartOffset() == offset) {
+        return Collections.EMPTY_LIST;
+      }
+      if (offset == firstAstNodeOffset && globalsError != null) {
+        // Any errors in globals we show at first AST node
+        ArrayList<String> errs = new ArrayList<>();
+        errs.add("Error in globals script '" + globalsError.getGlobalsScriptPath() + "': " + globalsError.getMessage());
+        errs.addAll(errors.getOrDefault(offset, Collections.EMPTY_LIST));
+        return errs;
+      }
+      return errors.getOrDefault(offset, Collections.EMPTY_LIST);
     }
 
     public void resolve(JactlFile file) {
-      resolver = new Resolver(jactlContext, Collections.EMPTY_MAP, jactlAst.location);
+      boolean globalsFile = JactlUtils.isGlobalsFile(file);
+      globalsError = null;
+      Map<String,Object> globals = Collections.EMPTY_MAP;
+      Project            project = file.getProject();
+      if (!globalsFile) {
+        try {
+          globals = JactlUtils.getGlobals(project);
+        }
+        catch (GlobalsException e) {
+          globalsError = e;
+        }
+      }
+      resolver = new Resolver(jactlContext, globals, jactlAst.location);
       String packageName = JactlUtils.packageNameFor(file);
-      if (packageName == null) {
+      if (packageName == null && !globalsFile) {
         errors.putIfAbsent(0, new ArrayList<>());
         errors.get(0).add("File exists outside configured source roots");
         return;
@@ -451,7 +490,17 @@ public class JactlParserAdapter implements PsiParser {
         errors.putIfAbsent(offset, new ArrayList<>());
         errors.get(offset).add(e.getErrorMessage());
       });
+      if (globalsFile) {
+        Long lastRefresh = file.getUserData(LAST_REFRESH);
+        if (lastRefresh == null || file.getModificationStamp() > lastRefresh) {
+          file.putUserData(LAST_REFRESH, file.getModificationStamp());
+          // Get all open files (excluding the globals script) and reparse in case they depend on any globals
+          List<VirtualFile> openFiles = Stream.of(FileEditorManager.getInstance(project).getOpenFiles()).filter(vf -> !vf.equals(file.getVirtualFile())).toList();
+          ApplicationManager.getApplication().invokeLater(() -> FileContentUtil.reparseFiles(project, openFiles, false));
+        }
+      }
     }
   }
+
 }
 

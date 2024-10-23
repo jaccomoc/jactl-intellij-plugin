@@ -17,13 +17,13 @@
 
 package io.jactl.intellijplugin.extensions.runner;
 
-import com.intellij.execution.CantRunException;
-import com.intellij.execution.CommonJavaRunConfigurationParameters;
-import com.intellij.execution.ExecutionException;
-import com.intellij.execution.Executor;
+import com.intellij.execution.*;
+import com.intellij.execution.application.JvmMainMethodRunConfigurationOptions;
 import com.intellij.execution.configurations.*;
 import com.intellij.execution.process.OSProcessHandler;
 import com.intellij.execution.runners.ExecutionEnvironment;
+import com.intellij.execution.target.TargetEnvironmentRequest;
+import com.intellij.execution.target.TargetedCommandLineBuilder;
 import com.intellij.execution.util.JavaParametersUtil;
 import com.intellij.execution.util.ProgramParametersUtil;
 import com.intellij.execution.util.ScriptFileUtil;
@@ -37,6 +37,9 @@ import com.intellij.openapi.roots.OrderEnumerator;
 import com.intellij.openapi.roots.ProjectRootManager;
 import com.intellij.openapi.roots.ui.configuration.ClasspathEditor;
 import com.intellij.openapi.roots.ui.configuration.ModulesConfigurator;
+import com.intellij.openapi.util.JDOMExternalizer;
+import com.intellij.openapi.util.WriteExternalException;
+import com.intellij.openapi.util.io.FileUtil;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiFile;
@@ -44,11 +47,13 @@ import com.intellij.psi.PsiManager;
 import com.intellij.refactoring.listeners.RefactoringElementAdapter;
 import com.intellij.refactoring.listeners.RefactoringElementListener;
 import com.intellij.util.net.HttpConfigurable;
-import io.jactl.Utils;
 import io.jactl.intellijplugin.JactlFile;
 import io.jactl.intellijplugin.JactlUtils;
 import io.jactl.intellijplugin.common.JactlBundle;
 import io.jactl.intellijplugin.common.JactlPlugin;
+import io.jactl.intellijplugin.extensions.settings.JactlConfiguration;
+import io.jactl.intellijplugin.jpsplugin.builder.GlobalsException;
+import org.jdom.Element;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -60,15 +65,17 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 public class JactlRunConfiguration extends ModuleBasedConfiguration<RunConfigurationModule, Object>
-                                   implements CommonJavaRunConfigurationParameters, RefactoringListenerProvider {
+                                   implements CommonJavaRunConfigurationParameters, RefactoringListenerProvider, InputRedirectAware {
 
-  private String scriptPath;
-  private String workingDir;
-  private String vmParams;
+  private String  scriptPath;
+  private String  workingDir;
+  private String  vmParams;
   private boolean isAlternativeJrePathEnabled;
-  private String alternativeJrePath;
-  private String programParams;
+  private String  alternativeJrePath;
+  private String  programParams;
   private boolean isPassParentEnvs;
+  private String  globalVariablesScript;
+  private boolean verboseEnabled;
 
   private Map<String,String> envs = new HashMap<>();
 
@@ -165,6 +172,33 @@ public class JactlRunConfiguration extends ModuleBasedConfiguration<RunConfigura
     return scriptPath;
   }
 
+  public void setGlobalVariablesScript(String script) {
+    globalVariablesScript = script;
+  }
+
+  public String getGlobalVariablesScript() {
+    return globalVariablesScript;
+  }
+
+  public void setVerboseEnabled(boolean enabled) {
+    verboseEnabled = enabled;
+  }
+
+  public boolean isVerboseEnabled() {
+    return verboseEnabled;
+  }
+
+  @NotNull
+  @Override
+  public InputRedirectOptions getInputRedirectOptions() {
+    return ((JvmMainMethodRunConfigurationOptions)getOptions()).getRedirectOptions();
+  }
+
+  @Override
+  protected @NotNull Class<? extends ModuleBasedConfigurationOptions> getDefaultOptionsClass() {
+    return JvmMainMethodRunConfigurationOptions.class;
+  }
+
   @Override
   public Collection<Module> getValidModules() {
     return Arrays.asList(ModuleManager.getInstance(getProject()).getModules());
@@ -226,7 +260,19 @@ public class JactlRunConfiguration extends ModuleBasedConfiguration<RunConfigura
       e.setQuickFix(() -> ModulesConfigurator.showDialog(module.getProject(), module.getName(), ClasspathEditor.getName()));
       throw e;
     }
+
+    if (globalVariablesScript != null && !globalVariablesScript.trim().isEmpty()) {
+      var fileName = FileUtil.toSystemIndependentName(globalVariablesScript.trim());
+      try {
+        JactlPlugin.getGlobals(globalVariablesScript);
+      }
+      catch (GlobalsException e) {
+        throw new RuntimeConfigurationException(e.getMessage(), fileName);
+      }
+    }
   }
+
+
 
   @Override
   public @Nullable RunProfileState getState(@NotNull Executor executor, @NotNull ExecutionEnvironment environment) throws ExecutionException {
@@ -239,6 +285,16 @@ public class JactlRunConfiguration extends ModuleBasedConfiguration<RunConfigura
         final OSProcessHandler handler = super.startProcess();
         handler.setShouldDestroyProcessRecursively(true);
         return handler;
+      }
+
+      @Override
+      protected @NotNull TargetedCommandLineBuilder createTargetedCommandLine(@NotNull TargetEnvironmentRequest request) throws ExecutionException {
+        var lineBuilder = super.createTargetedCommandLine(request);
+        File inputFile = InputRedirectAware.getInputFile(JactlRunConfiguration.this);
+        if (inputFile != null) {
+          lineBuilder.setInputFile(request.getDefaultVolume().createUpload(inputFile.getAbsolutePath()));
+        }
+        return lineBuilder;
       }
 
       @Override
@@ -293,19 +349,32 @@ public class JactlRunConfiguration extends ModuleBasedConfiguration<RunConfigura
     // Main class
     params.setMainClass("io.jactl.Jactl");
 
+    if (isVerboseEnabled()) {
+      params.getProgramParametersList().add("-v");
+    }
+
+    // Add global vars file if it exists. Use run config value or project value if run config not set.
+    String gvs = getGlobalVariablesScript();
+    gvs = gvs != null && !gvs.trim().isEmpty() ? gvs : JactlConfiguration.getInstance(getProject()).getGlobalVariablesScript();
+    if (gvs != null && !gvs.isEmpty()) {
+      params.getProgramParametersList().add("-g");
+      params.getProgramParametersList().add(FileUtil.toSystemIndependentName(gvs.trim()));
+    }
+
     // Add class package roots
     params.getProgramParametersList().add("-P");
-    params.getProgramParametersList().add(JactlUtils.getSourceRoots(module.getProject()).stream().collect(Collectors.joining(",")));
+    params.getProgramParametersList().add(String.join(",", JactlUtils.getSourceRoots(module.getProject())));
 
     // Script location and script args
     params.getProgramParametersList().add("-C");
-    String classPath = JactlUtils.pathToClass(getProject(), getScriptPath());
-    classPath = JactlPlugin.BASE_JACTL_PKG + '.' + classPath;
-    int idx = classPath.lastIndexOf('.');
-    classPath = classPath.substring(0, idx + 1) + JactlPlugin.SCRIPT_PREFIX + classPath.substring(idx + 1);
+    String scriptClass = JactlUtils.pathToClass(getProject(), getScriptPath());
+    scriptClass = JactlPlugin.BASE_JACTL_PKG + '.' + scriptClass;
+    int idx = scriptClass.lastIndexOf('.');
+    scriptClass = scriptClass.substring(0, idx + 1) + JactlPlugin.SCRIPT_PREFIX + scriptClass.substring(idx + 1);
 
     //params.getProgramParametersList().add(FileUtil.toSystemDependentName(getScriptPath()));
-    params.getProgramParametersList().add(classPath);
+    params.getProgramParametersList().add(scriptClass);
+
     params.getProgramParametersList().addParametersString(getProgramParameters());
   }
 
@@ -319,4 +388,37 @@ public class JactlRunConfiguration extends ModuleBasedConfiguration<RunConfigura
                  .findFirst()
                  .orElse(null);
   }
+
+  @Override
+  public void readExternal(@NotNull Element element) {
+    super.readExternal(element);
+    scriptPath = ExternalizablePath.localPathValue(JDOMExternalizer.readString(element, "scriptPath"));
+    String workDir = JDOMExternalizer.readString(element, "workingDir");
+    if (!".".equals(workDir)) {
+      workingDir = ExternalizablePath.localPathValue(workDir);
+    }
+    vmParams = JDOMExternalizer.readString(element, "vmparams");
+    isAlternativeJrePathEnabled = JDOMExternalizer.readBoolean(element, "alternativeJrePathEnabled");
+    alternativeJrePath = JDOMExternalizer.readString(element, "alternativeJrePath");
+    programParams = JDOMExternalizer.readString(element, "programParams");
+    envs.clear();
+    JDOMExternalizer.readMap(element, envs, null, "env");
+    globalVariablesScript = ExternalizablePath.localPathValue(JDOMExternalizer.readString(element, "globalVariablesScript"));
+    verboseEnabled = JDOMExternalizer.readBoolean(element, "verboseEnabled");
+  }
+
+  @Override
+  public void writeExternal(@NotNull Element element) throws WriteExternalException {
+    super.writeExternal(element);
+    JDOMExternalizer.write(element, "scriptPath", ExternalizablePath.urlValue(scriptPath));
+    JDOMExternalizer.write(element, "workingDir", ExternalizablePath.urlValue(workingDir));
+    JDOMExternalizer.write(element, "vmparams", vmParams);
+    JDOMExternalizer.write(element,  "alternativeJrePathEnabled", isAlternativeJrePathEnabled);
+    JDOMExternalizer.write(element, "alternativeJrePath", alternativeJrePath);
+    JDOMExternalizer.write(element, "programParams", programParams);
+    JDOMExternalizer.writeMap(element, envs, null, "env");
+    JDOMExternalizer.write(element, "globalVariablesScript", globalVariablesScript);
+    JDOMExternalizer.write(element, "verboseEnabled", verboseEnabled);
+  }
+
 }

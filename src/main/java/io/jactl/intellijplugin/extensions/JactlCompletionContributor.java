@@ -153,6 +153,15 @@ public class JactlCompletionContributor extends CompletionContributor {
                                                                                       .filter(entry -> entry.getValue().isStatic)
                                                                                       .map(entry -> createStaticFunctionLookup(descriptor, entry.getValue())))
                                                      .toList());
+
+               // Add any global variables if we are in a script
+               JactlFile file = element.getFile();
+               if (file.isScriptFile()) {
+                 Map<String, Object> globals = JactlUtils.getGlobals(element.getProject());
+                 if (globals != null) {
+                   globals.keySet().forEach(key -> result.addElement(LookupElementBuilder.create(key)));
+                 }
+               }
              }
            });
 
@@ -303,15 +312,15 @@ public class JactlCompletionContributor extends CompletionContributor {
 
     // Import statements: first identifier
     extend(CompletionType.BASIC, PlatformPatterns.psiElement(JactlTokenTypes.IDENTIFIER)
-//                                                 .afterLeaf(TokenType.IMPORT.asString)
                                                  .withParent(PlatformPatterns.psiElement(JactlStmtElementType.IMPORT_STMT)),
            new CompletionProvider<>() {
              @Override
              protected void addCompletions(@NotNull CompletionParameters parameters, @NotNull ProcessingContext context, @NotNull CompletionResultSet result) {
                JactlPsiElement element = (JactlPsiElement) parameters.getPosition();
-               // Add top level classes, packages and 'static' keyword
+               // Add top level packages and 'static' keyword
                result.addAllElements(JactlUtils.packageContents(element.getProject(), "")
                                                .stream()
+                                               .filter(entry -> entry.isPackage())
                                                .map(entry -> createClassOrPackageLookup("", entry))
                                                .toList());
                // If we don't already have 'static' then add it

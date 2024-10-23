@@ -4,7 +4,6 @@ import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.testFramework.EditorTestUtil;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 public class TypingTest extends BaseTypingTestCase {
 

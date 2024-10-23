@@ -21,6 +21,7 @@ import com.intellij.lang.ASTNode;
 import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.roots.ProjectRootManager;
+import com.intellij.openapi.util.io.FileUtil;
 import com.intellij.openapi.vfs.VfsUtil;
 import com.intellij.openapi.vfs.VfsUtilCore;
 import com.intellij.openapi.vfs.VirtualFile;
@@ -30,15 +31,20 @@ import com.intellij.psi.tree.IElementType;
 import com.intellij.util.IncorrectOperationException;
 import io.jactl.*;
 import io.jactl.TokenType;
+import io.jactl.intellijplugin.common.JactlBundle;
 import io.jactl.intellijplugin.common.JactlPlugin;
+import io.jactl.intellijplugin.extensions.settings.JactlConfiguration;
+import io.jactl.intellijplugin.jpsplugin.builder.GlobalsException;
 import io.jactl.intellijplugin.psi.*;
 import io.jactl.intellijplugin.psi.impl.JactlPsiTypeImpl;
 import io.jactl.intellijplugin.psi.interfaces.JactlPsiName;
 import io.jactl.runtime.ClassDescriptor;
+import io.jactl.runtime.RuntimeUtils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.File;
+import java.nio.file.Path;
 import java.util.*;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -73,7 +79,7 @@ public class JactlUtils {
   }
 
   public static List<VirtualFile> getSourceRootFiles(Project project) {
-    return List.of(ProjectRootManager.getInstance(project).getContentSourceRoots());
+    return new ArrayList<>(List.of(ProjectRootManager.getInstance(project).getContentSourceRoots()));
   }
 
   public static <T> int indexOf(T[] elements, T element) {
@@ -90,8 +96,8 @@ public class JactlUtils {
     VfsUtilCore.visitChildrenRecursively(base, new VirtualFileVisitor<Void>() {
       @Override
       public boolean visitFile(@NotNull VirtualFile file) {
-        if (file.isDirectory() && !Objects.equals(file.getCanonicalPath(), base.getCanonicalPath())) {
-          String pkgName = file.getCanonicalPath().substring(base.getCanonicalPath().length() + 1).replace(File.separatorChar, '.');
+        if (file.isDirectory()) {
+          String pkgName = JactlPlugin.stripSeparatedPrefix(Objects.requireNonNull(file.getCanonicalPath()), base.getCanonicalPath(), File.separator).replace(File.separatorChar, '.');
           names.add(pkgName);
         }
         return true;
@@ -125,6 +131,21 @@ public class JactlUtils {
            + ")";
   }
 
+  public static JactlPsiElement getGlobal(String name, Project project) {
+    String globalsScript = JactlConfiguration.getInstance(project).getGlobalVariablesScript();
+    if (globalsScript != null && !globalsScript.trim().isEmpty()) {
+      var globalsFile = VfsUtil.findFile(Path.of(FileUtil.toSystemDependentName(globalsScript.trim())),true);
+      if (globalsFile != null) {
+        var psiGlobals = PsiManager.getInstance(project).findFile(globalsFile);
+        return (JactlPsiElement)getFirstDescendant(psiGlobals, element -> true);
+//        if (psiGlobals != null) {
+//          return (JactlPsiElement)getFirstDescendant(psiGlobals, element -> isElementType(element, JactlTokenTypes.IDENTIFIER) && element.getText().equals(name));
+//        }
+      }
+    }
+    return null;
+  }
+
   public static JactlPsiElement getNameElementForPsiElementInTree(JactlAstKey key) {
     var element = getPsiElementInTree(key);
     if (element == null || element instanceof JactlPsiName) {
@@ -154,6 +175,9 @@ public class JactlUtils {
   }
 
   public static String getDocumentation(PsiElement element, String defaultText) {
+    if (element instanceof JactlFile file && JactlUtils.isGlobalsFile(file)) {
+      return "Global variable";
+    }
     if (element instanceof JactlPsiElement jactlPsiElement) {
       JactlUserDataHolder astNode = jactlPsiElement.getJactlAstNode();
       if (astNode == null) {
@@ -180,11 +204,14 @@ public class JactlUtils {
       }
 
       if (astNode instanceof JactlName) {
-        JactlPsiElement parent = (JactlPsiElement) element.getParent();
-        astNode = parent.getJactlAstNode();
-        if (astNode == null) {
-          return defaultText;
+        PsiElement      psiParent = element.getParent();
+        if (psiParent instanceof JactlPsiElement parent) {
+          astNode = parent.getJactlAstNode();
+          if (astNode == null) {
+            return defaultText;
+          }
         }
+        return defaultText;
       }
 
       if (astNode instanceof Stmt.ClassDecl classDecl) {
@@ -406,6 +433,15 @@ public class JactlUtils {
     };
   }
 
+  public static boolean isGlobalsFile(JactlFile file) {
+    String globalsScriptName = JactlConfiguration.getInstance(file.getProject()).getGlobalVariablesScript();
+    if (globalsScriptName != null && !globalsScriptName.trim().isEmpty()) {
+      String canonicalPath = file.getVirtualFile().getCanonicalPath();
+      return FileUtil.toSystemIndependentName(canonicalPath).equals(FileUtil.toSystemIndependentName(globalsScriptName));
+    }
+    return false;
+  }
+
   public record PackageEntry(boolean isPackage, String name) {}
 
   /**
@@ -443,6 +479,10 @@ public class JactlUtils {
   }
 
   public static List<ClassDescriptor> packageClasses(Project project, String packageName) {
+    if (packageName == null || packageName.isEmpty()) {
+      // No automatic import of classes if we are at root level (i.e. no package)
+      return Collections.EMPTY_LIST;
+    }
     List<ClassDescriptor> contents = new ArrayList<>();
     processPackage(project, packageName, child -> {
       if (!child.isDirectory() && child.getFileType() == JactlFileType.INSTANCE) {
@@ -467,12 +507,11 @@ public class JactlUtils {
 
   public static JactlFile findFileForClass(Project project, String fqClassName) {
     String pkgName   = JactlPlugin.stripFromLast(fqClassName, '.');
-    String className = fqClassName.substring(pkgName.isEmpty() ? 0 : pkgName.length() + 1);
+    String className = JactlPlugin.stripSeparatedPrefix(fqClassName, pkgName, ".");
 
     // First strip prefix if we have script class
-    if (className.startsWith(JactlPlugin.SCRIPT_PREFIX)) {
-      className = className.substring(JactlPlugin.SCRIPT_PREFIX.length());
-    }
+    className = JactlPlugin.stripSeparatedPrefix(className, JactlPlugin.SCRIPT_PREFIX, null);
+
     // Remove inner classes (X$Y$Z -> X)
     className = JactlPlugin.stripFromFirst(className, '$');
 
@@ -538,7 +577,7 @@ public class JactlUtils {
   public static String getProjectPath(Project project, String path) {
     for (var root: getSourceRoots(project)) {
       if (path.startsWith(root)) {
-        return path.substring(root.length() + 1);
+        return JactlPlugin.stripSeparatedPrefix(path, root, File.separator);
       }
     }
     return null;
@@ -559,8 +598,7 @@ public class JactlUtils {
     if (moduleSourceRoot != null) {
       String path = moduleSourceRoot.getPath();
       if (file.getPath().startsWith(path)) {
-        String projectPath = path.equals(file.getPath()) ? "" : file.getPath().substring(path.length() + 1);
-        return projectPath;
+        return JactlPlugin.stripSeparatedPrefix(file.getPath(), path, File.separator);
       }
     }
     return defaultValue;
@@ -695,6 +733,97 @@ public class JactlUtils {
       return "";
     }
     return projectPath.substring(0, idx).replace(File.separatorChar, '.');
+  }
+
+  public static JactlContext createJactlContext(Project project) {
+    if (project == null) {
+      return JactlContext.create().evaluateConstExprs(false).build();
+    }
+    String baseJavaPkg = JactlPlugin.BASE_JACTL_PKG;
+    String baseJavaPkgFile = baseJavaPkg.replace('.', File.separatorChar);
+    return JactlContext.create()
+                       .javaPackage(baseJavaPkg)
+                       .evaluateConstExprs(false)
+                       .idePlugin(true)
+                       .packageChecker(pkgName -> {
+                         var pkgs = JactlUtils.pkgNames(project);
+                         return pkgs.contains(pkgName);
+                       })
+                       .classLookup(name -> lookup(name, baseJavaPkgFile, project))
+                       .build();
+  }
+
+  /**
+   * Get ClassDecriptor for given class name
+   * @param name             name of the class (jactl/pkg/x/y/z/A$B$C)
+   * @param baseJavaPkgFile  base java package in file format (jactl/pkg)
+   * @param project          the project
+   * @return the ClassDescriptor or null
+   */
+  private static ClassDescriptor lookup(String name, String baseJavaPkgFile, Project project) {
+    if (name.startsWith(baseJavaPkgFile)) {
+      name = JactlPlugin.stripSeparatedPrefix(name, baseJavaPkgFile, "/");
+    }
+    else {
+      LOG.warn("Class lookup name does not start with expected java package name (name=" + name + ")");
+    }
+
+    var file = JactlUtils.findFileForClassPath(project, name);
+    if (file == null) {
+      return null;
+    }
+
+    // Strip package name
+    String className = name.substring(name.lastIndexOf('/') + 1);
+    Stmt.ClassDecl classDecl = JactlParserAdapter.getClassDecl(file, file.getText(), className);
+    if (classDecl == null) {
+      return null;
+    }
+    return classDecl.classDescriptor;
+  }
+
+  public static VirtualFile getGlobalsFile(Project project) {
+    String scriptPath = JactlConfiguration.getInstance(project).getGlobalVariablesScript();
+    if (scriptPath != null) {
+      String fileName = FileUtil.toSystemIndependentName(scriptPath.trim());
+      if (!fileName.isEmpty()) {
+        return VfsUtil.findFile(Path.of(fileName), true);
+      }
+    }
+    return null;
+  }
+
+  public static Map<String,Object> getGlobals(Project project) {
+    Map<String,Object> globals = Collections.EMPTY_MAP;
+    var globalsFile = getGlobalsFile(project);
+    if (globalsFile != null) {
+      String scriptPath = JactlConfiguration.getInstance(project).getGlobalVariablesScript();
+      String fileName = FileUtil.toSystemIndependentName(scriptPath.trim());
+      PsiFile file = PsiManager.getInstance(project).findFile(globalsFile);
+      if (file == null) {
+        throw new GlobalsException(fileName, JactlBundle.message("script.runner.error.no.global.variables.script", fileName));
+      }
+      if (file.isDirectory()) {
+        throw new GlobalsException(fileName, JactlBundle.message("script.runner.error.global.variables.script.is.directory", fileName));
+      }
+
+      try {
+        String scriptContents = file.getText();
+        Object globalsObj    = Jactl.eval(scriptContents, Collections.EMPTY_MAP);
+        if (globalsObj != null && !(globalsObj instanceof Map)) {
+          throw new GlobalsException(fileName, JactlBundle.message("script.runner.error.global.variables.script.bad.type", RuntimeUtils.className(globalsObj)));
+        }
+        globals = (Map<String,Object>)globalsObj;
+      }
+      catch (CompileError e) {
+        // Only show first error when error compiling globals script
+        throw new GlobalsException(fileName, e.getErrors().get(0).getSingleLineMessage());
+      }
+      catch (Throwable e) {
+        throw new GlobalsException(fileName, e.toString());
+      }
+    }
+    return globals;
   }
 
 }

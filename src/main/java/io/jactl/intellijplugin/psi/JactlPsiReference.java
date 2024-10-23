@@ -191,6 +191,10 @@ public class JactlPsiReference extends PsiReferenceBase<PsiElement> implements P
       }
     }
 
+    if (declaration instanceof Expr.VarDecl varDecl && varDecl.isGlobal) {
+      return JactlUtils.getGlobal(varDecl.name.getStringValue(), getElement().getProject());
+    }
+
     JactlAstKey declarationKey = declaration.getUserData(JactlAstKey.class);
     if (declarationKey == null) {
       LOG.warn("Declaration has no AST Key set: declaration=" + declaration);

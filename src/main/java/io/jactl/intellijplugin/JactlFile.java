@@ -26,11 +26,10 @@ public class JactlFile extends PsiFileBase implements JactlPsiElement {
    * @return the base file name
    */
   public String getFileNameNoSuffix() {
-    String name = getVirtualFile().getName();
-    if (name.endsWith(JactlPlugin.SUFFIX)) {
-      name = name.substring(0, name.length() - JactlPlugin.SUFFIX.length());
-    }
-    return JactlPlugin.removeSuffix(name);
+    String name = getName();
+    name = JactlPlugin.removeSuffix(name);
+    int index = name.lastIndexOf(File.separatorChar);
+    return name.substring(index + 1);
   }
 
   /**
@@ -102,6 +101,16 @@ public class JactlFile extends PsiFileBase implements JactlPsiElement {
     // Script if no top level class or top level class does not match file name
     // (such as when editing a script and first stmt is a class declaration and
     // editing not yet complete).
-    return classDecl == null || !classDecl.name.getStringValue().equals(JactlPlugin.removeSuffix(this.getName()));
+    if (classDecl != null) {
+      return !classDecl.name.getStringValue().equals(getFileNameNoSuffix());
+    }
+
+    // Incomplete file so check if first element is a class declaration with same name as file
+    var firstChild = JactlUtils.getFirstChild(this, child -> !JactlUtils.isElementType(child, JactlStmtElementType.IMPORT_STMT, JactlNameElementType.PACKAGE));
+    if (JactlUtils.isElementType(firstChild, JactlStmtElementType.CLASS_DECL)) {
+      var name = JactlUtils.getFirstDescendant(firstChild, JactlNameElementType.CLASS);
+      return !name.getText().equals(getFileNameNoSuffix());
+    }
+    return true;
   }
 }

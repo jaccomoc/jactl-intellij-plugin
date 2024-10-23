@@ -17,9 +17,20 @@
 
 package io.jactl.intellijplugin.common;
 
+import com.intellij.openapi.util.io.FileUtil;
+import io.jactl.CompileError;
+import io.jactl.Jactl;
+import io.jactl.intellijplugin.jpsplugin.builder.GlobalsException;
+import io.jactl.runtime.RuntimeUtils;
+
 import java.io.File;
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.Collections;
+import java.util.Map;
 
 public class JactlPlugin {
   public static final String SUFFIX              = "jactl";
@@ -54,6 +65,22 @@ public class JactlPlugin {
     return stripFromLast(path, File.separatorChar);
   }
 
+  public static String stripSeparatedPrefix(String str, String prefix, String separator) {
+    if (str.startsWith(prefix)) {
+      if (str.length() == prefix.length()) {
+        return "";
+      }
+      str = str.substring(prefix.length());
+      if (separator != null && !separator.isEmpty() && str.startsWith(separator)) {
+        if (str.length() == separator.length()) {
+          return "";
+        }
+        return str.substring(separator.length());
+      }
+    }
+    return str;
+  }
+
   public static String stripFromFirst(String str, Character c) {
     int idx = str.indexOf(c);
     return idx == -1 ? str : str.substring(idx);
@@ -64,4 +91,38 @@ public class JactlPlugin {
     return idx == -1 ? "" : str.substring(0, idx);
   }
 
+  public static Map<String,Object> getGlobals(String scriptPath) {
+    Map<String,Object> globals = null;
+    if (scriptPath != null) {
+      String fileName = FileUtil.toSystemIndependentName(scriptPath.trim());
+      if (!fileName.isEmpty()) {
+        if (!FileUtil.exists(fileName)) {
+          throw new GlobalsException(fileName, JactlBundle.message("script.runner.error.no.global.variables.script", fileName));
+        }
+        if (!Files.isReadable(Path.of(fileName))) {
+          throw new GlobalsException(fileName, JactlBundle.message("script.runner.error.global.variables.script.not.readable", fileName));
+        }
+        if (Files.isDirectory(Path.of(fileName))) {
+          throw new GlobalsException(fileName, JactlBundle.message("script.runner.error.global.variables.script.is.directory", fileName));
+        }
+
+        try {
+          String scriptContents = new String(Files.readAllBytes(Paths.get(fileName)));
+          Object globalsObj    = Jactl.eval(scriptContents, Collections.EMPTY_MAP);
+          if (globalsObj != null && !(globalsObj instanceof Map)) {
+            throw new GlobalsException(fileName, JactlBundle.message("script.runner.error.global.variables.script.bad.type", RuntimeUtils.className(globalsObj)));
+          }
+          globals = (Map<String,Object>)globalsObj;
+        }
+        catch (CompileError e) {
+          // Only show first error when error compiling globals script
+          throw new GlobalsException(fileName, e.getErrors().get(0).getSingleLineMessage());
+        }
+        catch (Throwable e) {
+          throw new GlobalsException(fileName, e.toString());
+        }
+      }
+    }
+    return globals == null ? Collections.EMPTY_MAP : globals;
+  }
 }

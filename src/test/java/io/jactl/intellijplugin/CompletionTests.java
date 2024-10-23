@@ -19,14 +19,22 @@ package io.jactl.intellijplugin;
 
 import com.intellij.codeInsight.lookup.LookupElement;
 import com.intellij.openapi.application.WriteAction;
+import com.intellij.openapi.vfs.VfsUtil;
+import com.intellij.testFramework.ServiceContainerUtil;
 import com.intellij.testFramework.fixtures.BasePlatformTestCase;
 import io.jactl.JactlType;
+import io.jactl.intellijplugin.extensions.settings.JactlConfiguration;
+import io.jactl.intellijplugin.jpsplugin.builder.JpsJactlSettings;
 import io.jactl.runtime.Functions;
 import org.jetbrains.annotations.NotNull;
 import org.junit.Test;
 
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
+import java.net.URL;
+import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Stream;
@@ -34,6 +42,9 @@ import java.util.stream.Stream;
 public class CompletionTests extends BasePlatformTestCase {
 
   private static final String NONE = "$$NONE$$";
+
+  private JactlConfiguration jactlConfiguration = new JactlConfiguration();
+  private List<String> globalVars;
 
   @Override
   protected String getTestDataPath() {
@@ -45,6 +56,21 @@ public class CompletionTests extends BasePlatformTestCase {
     System.out.println(getTestName(true));
     String testData = "";
     myFixture.copyDirectoryToProject("completionTests", testData);
+
+    File temp = File.createTempFile("globals", "jactl");
+    temp.deleteOnExit();
+    try (OutputStream outputStream = new FileOutputStream(temp)) {
+      outputStream.write("[ aaa:'value of aaa', bbb:'value of bbb' ]".getBytes());
+      outputStream.flush();
+    }
+    globalVars = List.of("aaa", "bbb");
+    JpsJactlSettings settings = new JpsJactlSettings();
+    settings.globalVariablesScript = temp.getAbsolutePath();
+    jactlConfiguration.loadState(settings);
+    ServiceContainerUtil.registerOrReplaceServiceInstance(getProject(),
+                                                          JactlConfiguration.class,
+                                                          jactlConfiguration,
+                                                          getTestRootDisposable());
   }
 
   enum MatchType {
@@ -134,26 +160,30 @@ public class CompletionTests extends BasePlatformTestCase {
 
   ////////////////////////////////
 
+  @Test public void testStuff() {
+    test("class XYZ{}\nclass X extends <caret> {}", "XYZ");
+  }
+
   @Test public void testExtendsClassName() {
     test("class XYZ{}; class X <caret>", "extends");
-    test("class XYZ{}\nclass X extends <caret> {}", "XYZ", "TopLevel");
-    test("class XYZ{}\nclass X extends <caret>", "XYZ", "TopLevel");
-    test("class XYZ{}; class ABC extends XYZ{}\nclass X extends <caret> {}", "XYZ", "TopLevel", "ABC");
-    test("class XYZ{}; class ABC extends XYZ{}\nclass X extends <caret>", "XYZ", "TopLevel", "ABC");
+    test("class XYZ{}\nclass X extends <caret> {}", "XYZ");
+    test("class XYZ{}\nclass X extends <caret>", "XYZ");
+    test("class XYZ{}; class ABC extends XYZ{}\nclass X extends <caret> {}", "XYZ", "ABC");
+    test("class XYZ{}; class ABC extends XYZ{}\nclass X extends <caret>", "XYZ", "ABC");
     testInOrgTest("class ABC extends XYZ{}\nclass X extends <caret> {}", "ABC", "XYZ", "AClass");
     testInOrgTest("class ABC extends XYZ{}\nclass X extends <caret>", "ABC", "XYZ", "AClass");
   }
 
   @Test public void testExtendsInnerClassName() {
-    test("class XYZ{\nclass Inner {}\nclass X extends <caret> {}", "XYZ", "Inner", "TopLevel");
-    test("class XYZ{\nclass Inner {}\nclass X extends <caret> {", "XYZ", "Inner", "TopLevel");
-    test("class XYZ{\nclass Inner {}\nclass X extends <caret>", "XYZ", "Inner", "TopLevel");
-    test("class XYZ{\nclass Inner {}\n}\nclass X extends <caret> {}", "XYZ", "TopLevel");
-    test("class XYZ{\nclass Inner {}\n}\nclass X extends <caret> {", "XYZ", "TopLevel");
-    test("class XYZ{\nclass Inner {}\n}\nclass X extends <caret>", "XYZ", "TopLevel");
-    test("class XYZ{ class Inner{} }; class ABC extends XYZ{\nclass X extends <caret> {} }", "XYZ", "ABC", "Inner", "TopLevel");
-    test("class XYZ{ class Inner{} }; class ABC extends XYZ{\nclass X extends <caret> {}", "XYZ", "ABC", "Inner", "TopLevel");
-    test("class XYZ{ class Inner{} }; class ABC extends XYZ{\nclass X extends <caret>", "XYZ", "ABC", "Inner", "TopLevel");
+    test("class XYZ{\nclass Inner {}\nclass X extends <caret> {}", "XYZ", "Inner");
+    test("class XYZ{\nclass Inner {}\nclass X extends <caret> {", "XYZ", "Inner");
+    test("class XYZ{\nclass Inner {}\nclass X extends <caret>", "XYZ", "Inner");
+    test("class XYZ{\nclass Inner {}\n}\nclass X extends <caret> {}", "XYZ");
+    test("class XYZ{\nclass Inner {}\n}\nclass X extends <caret> {", "XYZ");
+    test("class XYZ{\nclass Inner {}\n}\nclass X extends <caret>", "XYZ");
+    test("class XYZ{ class Inner{} }; class ABC extends XYZ{\nclass X extends <caret> {} }", "XYZ", "ABC", "Inner");
+    test("class XYZ{ class Inner{} }; class ABC extends XYZ{\nclass X extends <caret> {}", "XYZ", "ABC", "Inner");
+    test("class XYZ{ class Inner{} }; class ABC extends XYZ{\nclass X extends <caret>", "XYZ", "ABC", "Inner");
     testInOrgTest("class X extends AClass.B { class Y extends <caret> }", "XYZ", "AClass", "XXX", "X", "B");
     testInOrgTest("class X extends AClass.B { class Y extends <caret>", "XYZ", "AClass", "XXX", "X", "B");
     testInOrgTest("class X extends AClass.B { class Y extends <caret> {", "XYZ", "AClass", "XXX", "X", "B");
@@ -181,15 +211,15 @@ public class CompletionTests extends BasePlatformTestCase {
   }
 
   @Test public void testParameterTypes() {
-    test("class X{}; def f(<caret> x", Stream.of("TopLevel", "X"), Stream.of(JactlUtils.BUILTIN_TYPES));
-    test("class X{}; def f(<caret>", Stream.of("TopLevel", "X"), Stream.of(JactlUtils.BUILTIN_TYPES));
-    test("class X{}; def f(<caret> x)", Stream.of("TopLevel", "X"), Stream.of(JactlUtils.BUILTIN_TYPES));
-    test("class X{}; def f(<caret> x, ", Stream.of("TopLevel", "X"), Stream.of(JactlUtils.BUILTIN_TYPES));
-    test("class X{}; def f(int x, <caret>", Stream.of("TopLevel", "X"), Stream.of(JactlUtils.BUILTIN_TYPES));
-    test("class X{}; def f(int x, <caret>)", Stream.of("TopLevel", "X"), Stream.of(JactlUtils.BUILTIN_TYPES));
-    test("class X{}; def f(x, <caret>", Stream.of("TopLevel", "X"), Stream.of(JactlUtils.BUILTIN_TYPES));
-    test("class X{}; def f(x, <caret>)", Stream.of("TopLevel", "X"), Stream.of(JactlUtils.BUILTIN_TYPES));
-    test("class X{}; def f(x, <caret> y)", Stream.of("TopLevel", "X"), Stream.of(JactlUtils.BUILTIN_TYPES));
+    test("class X{}; def f(<caret> x", Stream.of("X"), Stream.of(JactlUtils.BUILTIN_TYPES));
+    test("class X{}; def f(<caret>", Stream.of("X"), Stream.of(JactlUtils.BUILTIN_TYPES));
+    test("class X{}; def f(<caret> x)", Stream.of("X"), Stream.of(JactlUtils.BUILTIN_TYPES));
+    test("class X{}; def f(<caret> x, ", Stream.of("X"), Stream.of(JactlUtils.BUILTIN_TYPES));
+    test("class X{}; def f(int x, <caret>", Stream.of("X"), Stream.of(JactlUtils.BUILTIN_TYPES));
+    test("class X{}; def f(int x, <caret>)", Stream.of("X"), Stream.of(JactlUtils.BUILTIN_TYPES));
+    test("class X{}; def f(x, <caret>", Stream.of("X"), Stream.of(JactlUtils.BUILTIN_TYPES));
+    test("class X{}; def f(x, <caret>)", Stream.of("X"), Stream.of(JactlUtils.BUILTIN_TYPES));
+    test("class X{}; def f(x, <caret> y)", Stream.of("X"), Stream.of(JactlUtils.BUILTIN_TYPES));
     testInOrgTest("class X{}; def f(<caret> x", Stream.of("X", "XYZ", "AClass"), Stream.of(JactlUtils.BUILTIN_TYPES));
     testInOrgTest("class X{}; def f(<caret>", Stream.of("X", "XYZ", "AClass"), Stream.of(JactlUtils.BUILTIN_TYPES));
     testInOrgTest("class X{}; def f(<caret> x)", Stream.of("X", "XYZ", "AClass"), Stream.of(JactlUtils.BUILTIN_TYPES));
@@ -200,35 +230,35 @@ public class CompletionTests extends BasePlatformTestCase {
     testInOrgTest("class X{}; def f(x, <caret>)", Stream.of("X", "XYZ", "AClass"), Stream.of(JactlUtils.BUILTIN_TYPES));
     testInOrgTest("class X{}; def f(x, <caret> y)", Stream.of("X", "XYZ", "AClass"), Stream.of(JactlUtils.BUILTIN_TYPES));
 
-    test("class X{}; def f = { <caret> x ->", Stream.of("TopLevel", "X"), Stream.of(JactlUtils.BUILTIN_TYPES));
-    test("class X{}; def f = { <caret> ->", Stream.of("TopLevel", "X"), Stream.of(JactlUtils.BUILTIN_TYPES));
-    test("class X{}; def f = { <caret> x ->", Stream.of("TopLevel", "X"), Stream.of(JactlUtils.BUILTIN_TYPES));
-    test("class X{}; def f = { <caret> x, ->", Stream.of("TopLevel", "X"), Stream.of(JactlUtils.BUILTIN_TYPES));
-    test("class X{}; def f = { int x, <caret> ->", Stream.of("TopLevel", "X"), Stream.of(JactlUtils.BUILTIN_TYPES));
-    test("class X{}; def f = { int x, <caret> ->", Stream.of("TopLevel", "X"), Stream.of(JactlUtils.BUILTIN_TYPES));
-    test("class X{}; def f = { x, <caret> ->", Stream.of("TopLevel", "X"), Stream.of(JactlUtils.BUILTIN_TYPES));
-    test("class X{}; def f = { x, <caret> ->", Stream.of("TopLevel", "X"), Stream.of(JactlUtils.BUILTIN_TYPES));
-    test("class X{}; def f = { x, <caret> y ->", Stream.of("TopLevel", "X"), Stream.of(JactlUtils.BUILTIN_TYPES));
+    test("class X{}; def f = { <caret> x ->", Stream.of("X"), Stream.of(JactlUtils.BUILTIN_TYPES));
+    test("class X{}; def f = { <caret> ->", Stream.of("X"), Stream.of(JactlUtils.BUILTIN_TYPES));
+    test("class X{}; def f = { <caret> x ->", Stream.of("X"), Stream.of(JactlUtils.BUILTIN_TYPES));
+    test("class X{}; def f = { <caret> x, ->", Stream.of("X"), Stream.of(JactlUtils.BUILTIN_TYPES));
+    test("class X{}; def f = { int x, <caret> ->", Stream.of("X"), Stream.of(JactlUtils.BUILTIN_TYPES));
+    test("class X{}; def f = { int x, <caret> ->", Stream.of("X"), Stream.of(JactlUtils.BUILTIN_TYPES));
+    test("class X{}; def f = { x, <caret> ->", Stream.of("X"), Stream.of(JactlUtils.BUILTIN_TYPES));
+    test("class X{}; def f = { x, <caret> ->", Stream.of("X"), Stream.of(JactlUtils.BUILTIN_TYPES));
+    test("class X{}; def f = { x, <caret> y ->", Stream.of("X"), Stream.of(JactlUtils.BUILTIN_TYPES));
 
-    test("class XYZ{\nclass Inner {}\ndef f(<caret>", Stream.of("TopLevel", "XYZ", "Inner"), Stream.of(JactlUtils.BUILTIN_TYPES));
-    test("class XYZ{\nclass Inner {}\ndef f(<caret> x", Stream.of("TopLevel", "XYZ", "Inner"), Stream.of(JactlUtils.BUILTIN_TYPES));
-    test("class XYZ{\nclass Inner {}\ndef f(<caret> x)", Stream.of("TopLevel", "XYZ", "Inner"), Stream.of(JactlUtils.BUILTIN_TYPES));
-    test("class XYZ{\nclass Inner {}\ndef f(<caret> x, )", Stream.of("TopLevel", "XYZ", "Inner"), Stream.of(JactlUtils.BUILTIN_TYPES));
-    test("class XYZ{\nclass Inner {}\ndef f(int x, <caret>", Stream.of("TopLevel", "XYZ", "Inner"), Stream.of(JactlUtils.BUILTIN_TYPES));
-    test("class XYZ{\nclass Inner {}\ndef f(int x, <caret>)", Stream.of("TopLevel", "XYZ", "Inner"), Stream.of(JactlUtils.BUILTIN_TYPES));
-    test("class XYZ{\nclass Inner {}\ndef f(int x, <caret> y)", Stream.of("TopLevel", "XYZ", "Inner"), Stream.of(JactlUtils.BUILTIN_TYPES));
-    test("class XYZ{\nclass Inner {}\ndef f(int x, <caret> y) }", Stream.of("TopLevel", "XYZ", "Inner"), Stream.of(JactlUtils.BUILTIN_TYPES));
-    test("class XYZ{\nclass Inner {}\ndef f(int x, <caret> y) {", Stream.of("TopLevel", "XYZ", "Inner"), Stream.of(JactlUtils.BUILTIN_TYPES));
-    test("class XYZ{\nclass Inner {}\ndef f(int x, <caret> y) {}", Stream.of("TopLevel", "XYZ", "Inner"), Stream.of(JactlUtils.BUILTIN_TYPES));
-    test("class XYZ{\nclass Inner {}\ndef f(int x, <caret> y) {} }", Stream.of("TopLevel", "XYZ", "Inner"), Stream.of(JactlUtils.BUILTIN_TYPES));
-    test("class XYZ{ class Inner{} }; class ABC extends XYZ{\ndef f(<caret>", Stream.of("TopLevel", "XYZ", "ABC", "Inner"), Stream.of(JactlUtils.BUILTIN_TYPES));
-    test("class XYZ{ class Inner{} }; class ABC extends XYZ{\ndef f(<caret> x", Stream.of("TopLevel", "XYZ", "ABC", "Inner"), Stream.of(JactlUtils.BUILTIN_TYPES));
-    test("class XYZ{ class Inner{} }; class ABC extends XYZ{\ndef f(int x, <caret>", Stream.of("TopLevel", "XYZ", "ABC", "Inner"), Stream.of(JactlUtils.BUILTIN_TYPES));
-    test("class XYZ{ class Inner{} }; class ABC extends XYZ{\ndef f(int x, <caret> y", Stream.of("TopLevel", "XYZ", "ABC", "Inner"), Stream.of(JactlUtils.BUILTIN_TYPES));
-    test("class XYZ{ class Inner{} }; class ABC extends XYZ{\ndef f(int x, <caret> y)", Stream.of("TopLevel", "XYZ", "ABC", "Inner"), Stream.of(JactlUtils.BUILTIN_TYPES));
-    test("class XYZ{ class Inner{} }; class ABC extends XYZ{\ndef f(int x, <caret> y) {", Stream.of("TopLevel", "XYZ", "ABC", "Inner"), Stream.of(JactlUtils.BUILTIN_TYPES));
-    test("class XYZ{ class Inner{} }; class ABC extends XYZ{\ndef f(int x, <caret> y) {}", Stream.of("TopLevel", "XYZ", "ABC", "Inner"), Stream.of(JactlUtils.BUILTIN_TYPES));
-    test("class XYZ{ class Inner{} }; class ABC extends XYZ{\ndef f(int x, <caret> y) {} }", Stream.of("TopLevel", "XYZ", "ABC", "Inner"), Stream.of(JactlUtils.BUILTIN_TYPES));
+    test("class XYZ{\nclass Inner {}\ndef f(<caret>", Stream.of("XYZ", "Inner"), Stream.of(JactlUtils.BUILTIN_TYPES));
+    test("class XYZ{\nclass Inner {}\ndef f(<caret> x", Stream.of("XYZ", "Inner"), Stream.of(JactlUtils.BUILTIN_TYPES));
+    test("class XYZ{\nclass Inner {}\ndef f(<caret> x)", Stream.of("XYZ", "Inner"), Stream.of(JactlUtils.BUILTIN_TYPES));
+    test("class XYZ{\nclass Inner {}\ndef f(<caret> x, )", Stream.of("XYZ", "Inner"), Stream.of(JactlUtils.BUILTIN_TYPES));
+    test("class XYZ{\nclass Inner {}\ndef f(int x, <caret>", Stream.of("XYZ", "Inner"), Stream.of(JactlUtils.BUILTIN_TYPES));
+    test("class XYZ{\nclass Inner {}\ndef f(int x, <caret>)", Stream.of("XYZ", "Inner"), Stream.of(JactlUtils.BUILTIN_TYPES));
+    test("class XYZ{\nclass Inner {}\ndef f(int x, <caret> y)", Stream.of("XYZ", "Inner"), Stream.of(JactlUtils.BUILTIN_TYPES));
+    test("class XYZ{\nclass Inner {}\ndef f(int x, <caret> y) }", Stream.of("XYZ", "Inner"), Stream.of(JactlUtils.BUILTIN_TYPES));
+    test("class XYZ{\nclass Inner {}\ndef f(int x, <caret> y) {", Stream.of("XYZ", "Inner"), Stream.of(JactlUtils.BUILTIN_TYPES));
+    test("class XYZ{\nclass Inner {}\ndef f(int x, <caret> y) {}", Stream.of("XYZ", "Inner"), Stream.of(JactlUtils.BUILTIN_TYPES));
+    test("class XYZ{\nclass Inner {}\ndef f(int x, <caret> y) {} }", Stream.of("XYZ", "Inner"), Stream.of(JactlUtils.BUILTIN_TYPES));
+    test("class XYZ{ class Inner{} }; class ABC extends XYZ{\ndef f(<caret>", Stream.of("XYZ", "ABC", "Inner"), Stream.of(JactlUtils.BUILTIN_TYPES));
+    test("class XYZ{ class Inner{} }; class ABC extends XYZ{\ndef f(<caret> x", Stream.of("XYZ", "ABC", "Inner"), Stream.of(JactlUtils.BUILTIN_TYPES));
+    test("class XYZ{ class Inner{} }; class ABC extends XYZ{\ndef f(int x, <caret>", Stream.of("XYZ", "ABC", "Inner"), Stream.of(JactlUtils.BUILTIN_TYPES));
+    test("class XYZ{ class Inner{} }; class ABC extends XYZ{\ndef f(int x, <caret> y", Stream.of("XYZ", "ABC", "Inner"), Stream.of(JactlUtils.BUILTIN_TYPES));
+    test("class XYZ{ class Inner{} }; class ABC extends XYZ{\ndef f(int x, <caret> y)", Stream.of("XYZ", "ABC", "Inner"), Stream.of(JactlUtils.BUILTIN_TYPES));
+    test("class XYZ{ class Inner{} }; class ABC extends XYZ{\ndef f(int x, <caret> y) {", Stream.of("XYZ", "ABC", "Inner"), Stream.of(JactlUtils.BUILTIN_TYPES));
+    test("class XYZ{ class Inner{} }; class ABC extends XYZ{\ndef f(int x, <caret> y) {}", Stream.of("XYZ", "ABC", "Inner"), Stream.of(JactlUtils.BUILTIN_TYPES));
+    test("class XYZ{ class Inner{} }; class ABC extends XYZ{\ndef f(int x, <caret> y) {} }", Stream.of("XYZ", "ABC", "Inner"), Stream.of(JactlUtils.BUILTIN_TYPES));
     testInOrgTest("class X extends AClass.B { def f(<caret>", Stream.of("XYZ", "AClass", "XXX", "X", "B"), Stream.of(JactlUtils.BUILTIN_TYPES));
     testInOrgTest("class X extends AClass.B { def f(<caret> x", Stream.of("XYZ", "AClass", "XXX", "X", "B"), Stream.of(JactlUtils.BUILTIN_TYPES));
     testInOrgTest("class X extends AClass.B { def f(int x, <caret>", Stream.of("XYZ", "AClass", "XXX", "X", "B"), Stream.of(JactlUtils.BUILTIN_TYPES));
@@ -270,16 +300,16 @@ public class CompletionTests extends BasePlatformTestCase {
   }
 
   @Test public void testFunctionReturnTypes() {
-    test("class X{}; <caret> f(", Stream.of("TopLevel", "X"), Stream.of(JactlUtils.BUILTIN_TYPES));
-    test("class X{}; <caret> f(x)", Stream.of("TopLevel", "X"), Stream.of(JactlUtils.BUILTIN_TYPES));
-    test("class X{}; <caret> f(int x)", Stream.of("TopLevel", "X"), Stream.of(JactlUtils.BUILTIN_TYPES));
-    test("class X{}; <caret> f(int x", Stream.of("TopLevel", "X"), Stream.of(JactlUtils.BUILTIN_TYPES));
-    test("class X{}; <caret> f(int x, ", Stream.of("TopLevel", "X"), Stream.of(JactlUtils.BUILTIN_TYPES));
-    test("class X{}; <caret> f(int x, int", Stream.of("TopLevel", "X"), Stream.of(JactlUtils.BUILTIN_TYPES));
-    test("class X{}; <caret> f(int x, y", Stream.of("TopLevel", "X"), Stream.of(JactlUtils.BUILTIN_TYPES));
-    test("class X{}; <caret> f(int x, y)", Stream.of("TopLevel", "X"), Stream.of(JactlUtils.BUILTIN_TYPES));
-    test("class X{}; <caret> f(int x, y) {", Stream.of("TopLevel", "X"), Stream.of(JactlUtils.BUILTIN_TYPES));
-    test("class X{}; <caret> f(int x, y) {}", Stream.of("TopLevel", "X"), Stream.of(JactlUtils.BUILTIN_TYPES));
+    test("class X{}; <caret> f(", Stream.of("X"), Stream.of(JactlUtils.BUILTIN_TYPES));
+    test("class X{}; <caret> f(x)", Stream.of("X"), Stream.of(JactlUtils.BUILTIN_TYPES));
+    test("class X{}; <caret> f(int x)", Stream.of("X"), Stream.of(JactlUtils.BUILTIN_TYPES));
+    test("class X{}; <caret> f(int x", Stream.of("X"), Stream.of(JactlUtils.BUILTIN_TYPES));
+    test("class X{}; <caret> f(int x, ", Stream.of("X"), Stream.of(JactlUtils.BUILTIN_TYPES));
+    test("class X{}; <caret> f(int x, int", Stream.of("X"), Stream.of(JactlUtils.BUILTIN_TYPES));
+    test("class X{}; <caret> f(int x, y", Stream.of("X"), Stream.of(JactlUtils.BUILTIN_TYPES));
+    test("class X{}; <caret> f(int x, y)", Stream.of("X"), Stream.of(JactlUtils.BUILTIN_TYPES));
+    test("class X{}; <caret> f(int x, y) {", Stream.of("X"), Stream.of(JactlUtils.BUILTIN_TYPES));
+    test("class X{}; <caret> f(int x, y) {}", Stream.of("X"), Stream.of(JactlUtils.BUILTIN_TYPES));
     testInOrgTest("class X{}; <caret> f(", Stream.of("X", "XYZ", "AClass"), Stream.of(JactlUtils.BUILTIN_TYPES));
     testInOrgTest("class X{}; <caret> f()", Stream.of("X", "XYZ", "AClass"), Stream.of(JactlUtils.BUILTIN_TYPES));
     testInOrgTest("class X{}; <caret> f(int", Stream.of("X", "XYZ", "AClass"), Stream.of(JactlUtils.BUILTIN_TYPES));
@@ -356,18 +386,18 @@ public class CompletionTests extends BasePlatformTestCase {
     testWithFileName(getFileName("org.test"), "class X { org.test2.<caret> f(x) {", "ABC", "sub");
 
     // Inner classes
-    test("class XYZ{\nclass Inner {}\n<caret> f(", Stream.of("TopLevel", "XYZ", "Inner"), Stream.of(JactlUtils.BUILTIN_TYPES));
-    test("class XYZ{\nclass Inner {}\n<caret> f(int", Stream.of("TopLevel", "XYZ", "Inner"), Stream.of(JactlUtils.BUILTIN_TYPES));
-    test("class XYZ{\nclass Inner {}\n<caret> f(int x", Stream.of("TopLevel", "XYZ", "Inner"), Stream.of(JactlUtils.BUILTIN_TYPES));
-    test("class XYZ{\nclass Inner {}\n<caret> f(x", Stream.of("TopLevel", "XYZ", "Inner"), Stream.of(JactlUtils.BUILTIN_TYPES));
-    test("class XYZ{\nclass Inner {}\n<caret> f(x)", Stream.of("TopLevel", "XYZ", "Inner"), Stream.of(JactlUtils.BUILTIN_TYPES));
-    test("class XYZ{\nclass Inner {}\n<caret> f(x) {}", Stream.of("TopLevel", "XYZ", "Inner"), Stream.of(JactlUtils.BUILTIN_TYPES));
-    test("class XYZ{\nclass Inner {}\n<caret> f(int x) {}", Stream.of("TopLevel", "XYZ", "Inner"), Stream.of(JactlUtils.BUILTIN_TYPES));
-    test("class XYZ{ class Inner{} }; class ABC extends XYZ{\n<caret> f(", Stream.of("TopLevel", "XYZ", "ABC", "Inner"), Stream.of(JactlUtils.BUILTIN_TYPES));
-    test("class XYZ{ class Inner{} }; class ABC extends XYZ{\n<caret> f(int x", Stream.of("TopLevel", "XYZ", "ABC", "Inner"), Stream.of(JactlUtils.BUILTIN_TYPES));
-    test("class XYZ{ class Inner{} }; class ABC extends XYZ{\n<caret> f(int x) {", Stream.of("TopLevel", "XYZ", "ABC", "Inner"), Stream.of(JactlUtils.BUILTIN_TYPES));
-    test("class XYZ{ class Inner{} }; class ABC extends XYZ{\n<caret> f(int x) {}", Stream.of("TopLevel", "XYZ", "ABC", "Inner"), Stream.of(JactlUtils.BUILTIN_TYPES));
-    test("class XYZ{ class Inner{} }; class ABC extends XYZ{\n<caret> f(int x) {} }", Stream.of("TopLevel", "XYZ", "ABC", "Inner"), Stream.of(JactlUtils.BUILTIN_TYPES));
+    test("class XYZ{\nclass Inner {}\n<caret> f(", Stream.of("XYZ", "Inner"), Stream.of(JactlUtils.BUILTIN_TYPES));
+    test("class XYZ{\nclass Inner {}\n<caret> f(int", Stream.of("XYZ", "Inner"), Stream.of(JactlUtils.BUILTIN_TYPES));
+    test("class XYZ{\nclass Inner {}\n<caret> f(int x", Stream.of("XYZ", "Inner"), Stream.of(JactlUtils.BUILTIN_TYPES));
+    test("class XYZ{\nclass Inner {}\n<caret> f(x", Stream.of("XYZ", "Inner"), Stream.of(JactlUtils.BUILTIN_TYPES));
+    test("class XYZ{\nclass Inner {}\n<caret> f(x)", Stream.of("XYZ", "Inner"), Stream.of(JactlUtils.BUILTIN_TYPES));
+    test("class XYZ{\nclass Inner {}\n<caret> f(x) {}", Stream.of("XYZ", "Inner"), Stream.of(JactlUtils.BUILTIN_TYPES));
+    test("class XYZ{\nclass Inner {}\n<caret> f(int x) {}", Stream.of("XYZ", "Inner"), Stream.of(JactlUtils.BUILTIN_TYPES));
+    test("class XYZ{ class Inner{} }; class ABC extends XYZ{\n<caret> f(", Stream.of("XYZ", "ABC", "Inner"), Stream.of(JactlUtils.BUILTIN_TYPES));
+    test("class XYZ{ class Inner{} }; class ABC extends XYZ{\n<caret> f(int x", Stream.of("XYZ", "ABC", "Inner"), Stream.of(JactlUtils.BUILTIN_TYPES));
+    test("class XYZ{ class Inner{} }; class ABC extends XYZ{\n<caret> f(int x) {", Stream.of("XYZ", "ABC", "Inner"), Stream.of(JactlUtils.BUILTIN_TYPES));
+    test("class XYZ{ class Inner{} }; class ABC extends XYZ{\n<caret> f(int x) {}", Stream.of("XYZ", "ABC", "Inner"), Stream.of(JactlUtils.BUILTIN_TYPES));
+    test("class XYZ{ class Inner{} }; class ABC extends XYZ{\n<caret> f(int x) {} }", Stream.of("XYZ", "ABC", "Inner"), Stream.of(JactlUtils.BUILTIN_TYPES));
     testInOrgTest("class X extends AClass.B { <caret> f(", Stream.of("XYZ", "AClass", "XXX", "X", "B"), Stream.of(JactlUtils.BUILTIN_TYPES));
     testInOrgTest("class X extends AClass.B { <caret> f()", Stream.of("XYZ", "AClass", "XXX", "X", "B"), Stream.of(JactlUtils.BUILTIN_TYPES));
     testInOrgTest("class X extends AClass.B { <caret> f() {} }", Stream.of("XYZ", "AClass", "XXX", "X", "B"), Stream.of(JactlUtils.BUILTIN_TYPES));
@@ -404,18 +434,18 @@ public class CompletionTests extends BasePlatformTestCase {
     testWithFileName(getFileName("org.test"), "class X { static org.test2.<caret> f(x)", "ABC", "sub");
     testWithFileName(getFileName("org.test"), "class X { static org.test2.<caret> f(x) {", "ABC", "sub");
 
-    test("class XYZ{\nclass Inner {}\nstatic <caret> f(", Stream.of("TopLevel", "XYZ", "Inner"), Stream.of(JactlUtils.BUILTIN_TYPES));
-    test("class XYZ{\nclass Inner {}\nstatic <caret> f(int", Stream.of("TopLevel", "XYZ", "Inner"), Stream.of(JactlUtils.BUILTIN_TYPES));
-    test("class XYZ{\nclass Inner {}\nstatic <caret> f(int x", Stream.of("TopLevel", "XYZ", "Inner"), Stream.of(JactlUtils.BUILTIN_TYPES));
-    test("class XYZ{\nclass Inner {}\nstatic <caret> f(x", Stream.of("TopLevel", "XYZ", "Inner"), Stream.of(JactlUtils.BUILTIN_TYPES));
-    test("class XYZ{\nclass Inner {}\nstatic <caret> f(x)", Stream.of("TopLevel", "XYZ", "Inner"), Stream.of(JactlUtils.BUILTIN_TYPES));
-    test("class XYZ{\nclass Inner {}\nstatic <caret> f(x) {}", Stream.of("TopLevel", "XYZ", "Inner"), Stream.of(JactlUtils.BUILTIN_TYPES));
-    test("class XYZ{\nclass Inner {}\nstatic <caret> f(int x) {}", Stream.of("TopLevel", "XYZ", "Inner"), Stream.of(JactlUtils.BUILTIN_TYPES));
-    test("class XYZ{ class Inner{} }; class ABC extends XYZ{\nstatic <caret> f(", Stream.of("TopLevel", "XYZ", "ABC", "Inner"), Stream.of(JactlUtils.BUILTIN_TYPES));
-    test("class XYZ{ class Inner{} }; class ABC extends XYZ{\nstatic <caret> f(int x", Stream.of("TopLevel", "XYZ", "ABC", "Inner"), Stream.of(JactlUtils.BUILTIN_TYPES));
-    test("class XYZ{ class Inner{} }; class ABC extends XYZ{\nstatic <caret> f(int x) {", Stream.of("TopLevel", "XYZ", "ABC", "Inner"), Stream.of(JactlUtils.BUILTIN_TYPES));
-    test("class XYZ{ class Inner{} }; class ABC extends XYZ{\nstatic <caret> f(int x) {}", Stream.of("TopLevel", "XYZ", "ABC", "Inner"), Stream.of(JactlUtils.BUILTIN_TYPES));
-    test("class XYZ{ class Inner{} }; class ABC extends XYZ{\nstatic <caret> f(int x) {} }", Stream.of("TopLevel", "XYZ", "ABC", "Inner"), Stream.of(JactlUtils.BUILTIN_TYPES));
+    test("class XYZ{\nclass Inner {}\nstatic <caret> f(", Stream.of("XYZ", "Inner"), Stream.of(JactlUtils.BUILTIN_TYPES));
+    test("class XYZ{\nclass Inner {}\nstatic <caret> f(int", Stream.of("XYZ", "Inner"), Stream.of(JactlUtils.BUILTIN_TYPES));
+    test("class XYZ{\nclass Inner {}\nstatic <caret> f(int x", Stream.of("XYZ", "Inner"), Stream.of(JactlUtils.BUILTIN_TYPES));
+    test("class XYZ{\nclass Inner {}\nstatic <caret> f(x", Stream.of("XYZ", "Inner"), Stream.of(JactlUtils.BUILTIN_TYPES));
+    test("class XYZ{\nclass Inner {}\nstatic <caret> f(x)", Stream.of("XYZ", "Inner"), Stream.of(JactlUtils.BUILTIN_TYPES));
+    test("class XYZ{\nclass Inner {}\nstatic <caret> f(x) {}", Stream.of("XYZ", "Inner"), Stream.of(JactlUtils.BUILTIN_TYPES));
+    test("class XYZ{\nclass Inner {}\nstatic <caret> f(int x) {}", Stream.of("XYZ", "Inner"), Stream.of(JactlUtils.BUILTIN_TYPES));
+    test("class XYZ{ class Inner{} }; class ABC extends XYZ{\nstatic <caret> f(", Stream.of("XYZ", "ABC", "Inner"), Stream.of(JactlUtils.BUILTIN_TYPES));
+    test("class XYZ{ class Inner{} }; class ABC extends XYZ{\nstatic <caret> f(int x", Stream.of("XYZ", "ABC", "Inner"), Stream.of(JactlUtils.BUILTIN_TYPES));
+    test("class XYZ{ class Inner{} }; class ABC extends XYZ{\nstatic <caret> f(int x) {", Stream.of("XYZ", "ABC", "Inner"), Stream.of(JactlUtils.BUILTIN_TYPES));
+    test("class XYZ{ class Inner{} }; class ABC extends XYZ{\nstatic <caret> f(int x) {}", Stream.of("XYZ", "ABC", "Inner"), Stream.of(JactlUtils.BUILTIN_TYPES));
+    test("class XYZ{ class Inner{} }; class ABC extends XYZ{\nstatic <caret> f(int x) {} }", Stream.of("XYZ", "ABC", "Inner"), Stream.of(JactlUtils.BUILTIN_TYPES));
     testInOrgTest("class X extends AClass.B { static <caret> f(", Stream.of("XYZ", "AClass", "XXX", "X", "B"), Stream.of(JactlUtils.BUILTIN_TYPES));
     testInOrgTest("class X extends AClass.B { static <caret> f()", Stream.of("XYZ", "AClass", "XXX", "X", "B"), Stream.of(JactlUtils.BUILTIN_TYPES));
     testInOrgTest("class X extends AClass.B { static <caret> f() {} }", Stream.of("XYZ", "AClass", "XXX", "X", "B"), Stream.of(JactlUtils.BUILTIN_TYPES));
@@ -423,7 +453,7 @@ public class CompletionTests extends BasePlatformTestCase {
 
   @Test public void testFieldAndVariableTypes() {
     // Variables
-    test("class X{}; <caret> f", Stream.of("TopLevel", "X"), Stream.of(JactlUtils.BUILTIN_TYPES));
+    test("class X{}; <caret> f", Stream.of("X"), Stream.of(JactlUtils.BUILTIN_TYPES));
     test("class XYZ{}\norg.<caret>", "test", "test2");
     test("class XYZ{}\norg.<caret> f", "test", "test2");
     test("class XYZ{}\norg.test.<caret>", "XYZ", "AClass");
@@ -441,8 +471,8 @@ public class CompletionTests extends BasePlatformTestCase {
     testInOrgTest("org.test2.<caret> f", "ABC", "sub");
 
     // Fields
-    test("class X{ <caret> f", Stream.of("TopLevel", "X"), Stream.of(JactlUtils.BUILTIN_TYPES));
-    test("class X{ <caret> f }", Stream.of("TopLevel", "X"), Stream.of(JactlUtils.BUILTIN_TYPES));
+    test("class X{ <caret> f", Stream.of("X"), Stream.of(JactlUtils.BUILTIN_TYPES));
+    test("class X{ <caret> f }", Stream.of("X"), Stream.of(JactlUtils.BUILTIN_TYPES));
     testInOrgTest("class X{ <caret> f", Stream.of("X", "XYZ", "AClass"), Stream.of(JactlUtils.BUILTIN_TYPES));
     testInOrgTest("class X{ <caret> f }", Stream.of("X", "XYZ", "AClass"), Stream.of(JactlUtils.BUILTIN_TYPES));
     test("class XYZ{}\nclass X { org.<caret> f", "test", "test2");
@@ -454,8 +484,8 @@ public class CompletionTests extends BasePlatformTestCase {
     testWithFileName(getFileName("org.test"), "class X { org.test2.<caret> f", "ABC", "sub");
 
     // Inner classes
-    test("class XYZ{\nclass Inner {}\n<caret> f", Stream.of("TopLevel", "XYZ", "Inner"), Stream.of(JactlUtils.BUILTIN_TYPES));
-    test("class XYZ{ class Inner{} }; class ABC extends XYZ{\n<caret> f", Stream.of("TopLevel", "XYZ", "ABC", "Inner"), Stream.of(JactlUtils.BUILTIN_TYPES));
+    test("class XYZ{\nclass Inner {}\n<caret> f", Stream.of("XYZ", "Inner"), Stream.of(JactlUtils.BUILTIN_TYPES));
+    test("class XYZ{ class Inner{} }; class ABC extends XYZ{\n<caret> f", Stream.of("XYZ", "ABC", "Inner"), Stream.of(JactlUtils.BUILTIN_TYPES));
     testInOrgTest("class X extends AClass.B { <caret> f", Stream.of("XYZ", "AClass", "XXX", "X", "B"), Stream.of(JactlUtils.BUILTIN_TYPES));
 
     // Const fields
@@ -476,39 +506,43 @@ public class CompletionTests extends BasePlatformTestCase {
   }
 
   @Test public void testIdentifierInExpr() {
-    test("class X{ static def func() {1} }; X x; <caret>", Stream.of("x", "TopLevel", "TopLevel.staticFunc", "TopLevel.fromJson", "X", "X.func", "X.fromJson", "class"), Stream.of(JactlUtils.BUILTIN_TYPES), Stream.of(JactlUtils.BEGINNING_KEYWORDS), Functions.getGlobalFunctionNames().stream());
-    test("class X{ static def func() {1} }; 3 + <caret>", Stream.of("TopLevel.staticFunc", "TopLevel.fromJson", "X.func", "X.fromJson"), Functions.getGlobalFunctionNames().stream());
-    test("class X{ static def func() {1} }; <caret> + ", Stream.of("TopLevel.staticFunc", "TopLevel.fromJson", "X.func", "X.fromJson"), Functions.getGlobalFunctionNames().stream());
-    test("class X{ static def func() {1} }; <caret> + 3", Stream.of("TopLevel.staticFunc", "TopLevel.fromJson", "X.func", "X.fromJson"), Functions.getGlobalFunctionNames().stream());
-    test("class X{ static def func() {1} }; (<caret>", Stream.of("TopLevel", "X", "TopLevel.staticFunc", "TopLevel.fromJson", "X.func", "X.fromJson"), Functions.getGlobalFunctionNames().stream(), Stream.of(JactlUtils.BUILTIN_TYPES));
-    test("class X{ static def func() {1} }; (<caret> + ", Stream.of("TopLevel.staticFunc", "TopLevel.fromJson", "X.func", "X.fromJson"), Functions.getGlobalFunctionNames().stream());
-    test("class X{ static def func() {1} }; (<caret> + 3", Stream.of("TopLevel.staticFunc", "TopLevel.fromJson", "X.func", "X.fromJson"), Functions.getGlobalFunctionNames().stream());
-    test("class X{ static def func() {1} }; (<caret> + 3)", Stream.of("TopLevel.staticFunc", "TopLevel.fromJson", "X.func", "X.fromJson"), Functions.getGlobalFunctionNames().stream());
-    test("class X{ static def func() {1} }; X x; { int i; }; def f(){}; { def j; <caret>", Stream.of("x", "f", "j", "TopLevel", "TopLevel.staticFunc", "TopLevel.fromJson", "X", "X.func", "X.fromJson"), Stream.of(JactlUtils.BUILTIN_TYPES), Stream.of(JactlUtils.BEGINNING_KEYWORDS), Functions.getGlobalFunctionNames().stream());
-    test("class X{ static def func() {1} }; X x; { int i; }; def f(){}; { def j; j + <caret>", Stream.of("x", "f", "j", "TopLevel.staticFunc", "TopLevel.fromJson", "X.func", "X.fromJson"), Functions.getGlobalFunctionNames().stream());
-    test("class X{ static def func() {1} }; X x; { int i; }; def f(){}; { def j; <caret> }", Stream.of("x", "f", "j", "TopLevel", "TopLevel.staticFunc", "TopLevel.fromJson", "X", "X.func", "X.fromJson"), Stream.of(JactlUtils.BUILTIN_TYPES), Stream.of(JactlUtils.BEGINNING_KEYWORDS), Functions.getGlobalFunctionNames().stream());
-    test("class X{ static def func() {1} }; X x; { int i; }; def f(){}; { def j; j + <caret> }", Stream.of("x", "f", "j", "TopLevel.staticFunc", "TopLevel.fromJson", "X.func", "X.fromJson"), Functions.getGlobalFunctionNames().stream());
-    testInOrgTest("class X{}; <caret>", Stream.of("class", "X", "X.fromJson", "XYZ", "XYZ.func", "XYZ.fromJson", "AClass", "AClass.func", "AClass.fromJson"), Stream.of(JactlUtils.BUILTIN_TYPES), Stream.of(JactlUtils.BEGINNING_KEYWORDS), Functions.getGlobalFunctionNames().stream());
-    testInOrgTest("class X{}; X x; x + <caret>", Stream.of("x", "X.fromJson", "XYZ.func", "XYZ.fromJson", "AClass.func", "AClass.fromJson"), Functions.getGlobalFunctionNames().stream());
+    test("class X{ static def func() {1} }; X x; <caret>", Stream.of("x", "X", "X.func", "X.fromJson", "class"), Stream.of(JactlUtils.BUILTIN_TYPES), Stream.of(JactlUtils.BEGINNING_KEYWORDS), Functions.getGlobalFunctionNames().stream(), globalVars.stream());
+    test("class X{ static def func() {1} }; 3 + <caret>", Stream.of("X.func", "X.fromJson"), Functions.getGlobalFunctionNames().stream(), globalVars.stream());
+    test("class X{ static def func() {1} }; <caret> + ", Stream.of("X.func", "X.fromJson"), Functions.getGlobalFunctionNames().stream(), globalVars.stream());
+    test("class X{ static def func() {1} }; <caret> + 3", Stream.of("X.func", "X.fromJson"), Functions.getGlobalFunctionNames().stream(), globalVars.stream());
+    test("class X{ static def func() {1} }; (<caret>", Stream.of("X", "X.func", "X.fromJson"), Functions.getGlobalFunctionNames().stream(), Stream.of(JactlUtils.BUILTIN_TYPES), globalVars.stream());
+    test("class X{ static def func() {1} }; (<caret> + ", Stream.of("X.func", "X.fromJson"), Functions.getGlobalFunctionNames().stream(), globalVars.stream());
+    test("class X{ static def func() {1} }; (<caret> + 3", Stream.of("X.func", "X.fromJson"), Functions.getGlobalFunctionNames().stream(), globalVars.stream());
+    test("class X{ static def func() {1} }; (<caret> + 3)", Stream.of("X.func", "X.fromJson"), Functions.getGlobalFunctionNames().stream(), globalVars.stream());
+    test("class X{ static def func() {1} }; X x; { int i; }; def f(){}; { def j; <caret>", Stream.of("x", "f", "j", "X", "X.func", "X.fromJson"), Stream.of(JactlUtils.BUILTIN_TYPES), Stream.of(JactlUtils.BEGINNING_KEYWORDS), Functions.getGlobalFunctionNames().stream(), globalVars.stream());
+    test("class X{ static def func() {1} }; X x; { int i; }; def f(){}; { def j; j + <caret>", Stream.of("x", "f", "j", "X.func", "X.fromJson"), Functions.getGlobalFunctionNames().stream(), globalVars.stream());
+    test("class X{ static def func() {1} }; X x; { int i; }; def f(){}; { def j; <caret> }", Stream.of("x", "f", "j", "X", "X.func", "X.fromJson"), Stream.of(JactlUtils.BUILTIN_TYPES), Stream.of(JactlUtils.BEGINNING_KEYWORDS), Functions.getGlobalFunctionNames().stream(), globalVars.stream());
+    test("class X{ static def func() {1} }; X x; { int i; }; def f(){}; { def j; j + <caret> }", Stream.of("x", "f", "j", "X.func", "X.fromJson"), Functions.getGlobalFunctionNames().stream(), globalVars.stream());
+    testInOrgTest("class X{}; <caret>", Stream.of("class", "X", "X.fromJson", "XYZ", "XYZ.func", "XYZ.fromJson", "AClass", "AClass.func", "AClass.fromJson"), Stream.of(JactlUtils.BUILTIN_TYPES), Stream.of(JactlUtils.BEGINNING_KEYWORDS), Functions.getGlobalFunctionNames().stream(), globalVars.stream());
+    testInOrgTest("class X{}; X x; x + <caret>", Stream.of("x", "X.fromJson", "XYZ.func", "XYZ.fromJson", "AClass.func", "AClass.fromJson"), Functions.getGlobalFunctionNames().stream(), globalVars.stream());
 
     test("class X{ static def func() {1}; X x; <caret>", Stream.of("static", "class", "const"), Stream.of(JactlUtils.BUILTIN_TYPES));
     test("class X{ static def func() {1}; X x; <caret> }", Stream.of("static", "class", "const"), Stream.of(JactlUtils.BUILTIN_TYPES));
-    test("class X{ static def func() {1}; X x; def f(int i) { <caret>", Stream.of("x", "i", "TopLevel", "TopLevel.staticFunc", "TopLevel.fromJson", "X", "func", "fromJson", "f", "this"), Stream.of(JactlUtils.BUILTIN_TYPES), Stream.of(JactlUtils.BEGINNING_KEYWORDS), Functions.getGlobalFunctionNames().stream());
-    test("class X{ static def func() {1}; X x; def f(int i) { <caret> }", Stream.of("x", "i", "TopLevel", "TopLevel.staticFunc", "TopLevel.fromJson", "X", "func", "fromJson", "f", "this"), Stream.of(JactlUtils.BUILTIN_TYPES), Stream.of(JactlUtils.BEGINNING_KEYWORDS), Functions.getGlobalFunctionNames().stream());
-    test("class X{ static def func() {1}; X x; def f(int i) { i + <caret>", Stream.of("x", "i", "TopLevel.staticFunc", "TopLevel.fromJson", "func", "fromJson", "f", "this"), Functions.getGlobalFunctionNames().stream());
-    testInOrgTest("class X extends AClass { X x; def f(int i) { <caret>", classesWithFromJson("B", "C", "XYZ"), Stream.of("x", "xxx", "VALUE", "i", "X", "AClass", "func", "fromJson", "f", "this", "super", "XYZ.func"), Stream.of(JactlUtils.BUILTIN_TYPES), Stream.of(JactlUtils.BEGINNING_KEYWORDS), Functions.getGlobalFunctionNames().stream());
-    testInOrgTest("class X extends AClass { X x; def f(int i) { <caret> }", classesWithFromJson("B", "C", "XYZ"), Stream.of("x", "xxx", "VALUE", "i", "X", "AClass", "func", "fromJson", "f", "this", "super", "XYZ.func"), Stream.of(JactlUtils.BUILTIN_TYPES), Stream.of(JactlUtils.BEGINNING_KEYWORDS), Functions.getGlobalFunctionNames().stream());
-    testInOrgTest("class X extends AClass { X x; def f(int i) { i + <caret>", Stream.of("B.fromJson", "C.fromJson", "x", "xxx", "VALUE", "i", "func", "fromJson", "f", "this", "super", "XYZ.func", "XYZ.fromJson"), Functions.getGlobalFunctionNames().stream());
+    test("class X{ static def func() {1}; X x; def f(int i) { <caret>", Stream.of("x", "i", "X", "func", "fromJson", "f", "this"), Stream.of(JactlUtils.BUILTIN_TYPES), Stream.of(JactlUtils.BEGINNING_KEYWORDS), Functions.getGlobalFunctionNames().stream(), globalVars.stream());
+    test("class X{ static def func() {1}; X x; def f(int i) { <caret> }", Stream.of("x", "i", "X", "func", "fromJson", "f", "this"), Stream.of(JactlUtils.BUILTIN_TYPES), Stream.of(JactlUtils.BEGINNING_KEYWORDS), Functions.getGlobalFunctionNames().stream(), globalVars.stream());
+    test("class X{ static def func() {1}; X x; def f(int i) { i + <caret>", Stream.of("x", "i", "func", "fromJson", "f", "this"), Functions.getGlobalFunctionNames().stream(), globalVars.stream());
+    testInOrgTest("class X extends AClass { X x; def f(int i) { <caret>", classesWithFromJson("B", "C", "XYZ"), Stream.of("x", "xxx", "VALUE", "i", "X", "AClass", "func", "fromJson", "f", "this", "super", "XYZ.func"), Stream.of(JactlUtils.BUILTIN_TYPES), Stream.of(JactlUtils.BEGINNING_KEYWORDS), Functions.getGlobalFunctionNames().stream(), globalVars.stream());
+    testInOrgTest("class X extends AClass { X x; def f(int i) { <caret> }", classesWithFromJson("B", "C", "XYZ"), Stream.of("x", "xxx", "VALUE", "i", "X", "AClass", "func", "fromJson", "f", "this", "super", "XYZ.func"), Stream.of(JactlUtils.BUILTIN_TYPES), Stream.of(JactlUtils.BEGINNING_KEYWORDS), Functions.getGlobalFunctionNames().stream(), globalVars.stream());
+    testInOrgTest("class X extends AClass { X x; def f(int i) { i + <caret>", Stream.of("B.fromJson", "C.fromJson", "x", "xxx", "VALUE", "i", "func", "fromJson", "f", "this", "super", "XYZ.func", "XYZ.fromJson"), Functions.getGlobalFunctionNames().stream(), globalVars.stream());
 
-    test("//test\n<caret>", Stream.of("TopLevel", "TopLevel.staticFunc", "TopLevel.fromJson", "class", "package", "import"), Stream.of(JactlUtils.BUILTIN_TYPES), Stream.of(JactlUtils.BEGINNING_KEYWORDS), Functions.getGlobalFunctionNames().stream());
-    test("<caret>", Stream.of("TopLevel", "TopLevel.staticFunc", "TopLevel.fromJson", "class", "package", "import"), Stream.of(JactlUtils.BUILTIN_TYPES), Stream.of(JactlUtils.BEGINNING_KEYWORDS), Functions.getGlobalFunctionNames().stream());
-    test("package a.b\n<caret>", Stream.of("class", "import"), Stream.of(JactlUtils.BUILTIN_TYPES), Stream.of(JactlUtils.BEGINNING_KEYWORDS), Functions.getGlobalFunctionNames().stream());
-    test("package a.b\nimport x.y.Z\n//test\n<caret>", Stream.of("class", "import"), Stream.of(JactlUtils.BUILTIN_TYPES), Stream.of(JactlUtils.BEGINNING_KEYWORDS), Functions.getGlobalFunctionNames().stream());
-    test("class X{}; <caret>", Stream.of("class", "TopLevel", "TopLevel.staticFunc", "TopLevel.fromJson", "X", "X.fromJson"), Stream.of(JactlUtils.BUILTIN_TYPES), Stream.of(JactlUtils.BEGINNING_KEYWORDS), Functions.getGlobalFunctionNames().stream());
-    test("class X{}; while (true) { <caret>", Stream.of("TopLevel", "TopLevel.staticFunc", "TopLevel.fromJson", "X", "X.fromJson"), Stream.of(JactlUtils.BUILTIN_TYPES), Stream.of(JactlUtils.BEGINNING_KEYWORDS), Functions.getGlobalFunctionNames().stream());
-    test("class X{}; while (true) { def i = 1\n<caret>", Stream.of("i", "TopLevel", "TopLevel.staticFunc", "TopLevel.fromJson", "X", "X.fromJson"), Stream.of(JactlUtils.BUILTIN_TYPES), Stream.of(JactlUtils.BEGINNING_KEYWORDS), Functions.getGlobalFunctionNames().stream());
-    test("class X{}; if (true) { <caret>", Stream.of("TopLevel", "TopLevel.staticFunc", "TopLevel.fromJson", "X", "X.fromJson"), Stream.of(JactlUtils.BUILTIN_TYPES), Stream.of(JactlUtils.BEGINNING_KEYWORDS), Functions.getGlobalFunctionNames().stream());
-    test("class X{}; for (int i; i < 10; i++) { <caret>", Stream.of("i", "TopLevel", "TopLevel.staticFunc", "TopLevel.fromJson", "X", "X.fromJson"), Stream.of(JactlUtils.BUILTIN_TYPES), Stream.of(JactlUtils.BEGINNING_KEYWORDS), Functions.getGlobalFunctionNames().stream());
+    test("//test\n<caret>", Stream.of("class", "package", "import"), Stream.of(JactlUtils.BUILTIN_TYPES), Stream.of(JactlUtils.BEGINNING_KEYWORDS), Functions.getGlobalFunctionNames().stream(), globalVars.stream());
+    test("<caret>", Stream.of("class", "package", "import"), Stream.of(JactlUtils.BUILTIN_TYPES), Stream.of(JactlUtils.BEGINNING_KEYWORDS), Functions.getGlobalFunctionNames().stream(), globalVars.stream());
+    test("package a.b\n<caret>", Stream.of("class", "import"), Stream.of(JactlUtils.BUILTIN_TYPES), Stream.of(JactlUtils.BEGINNING_KEYWORDS), Functions.getGlobalFunctionNames().stream(), globalVars.stream());
+    test("package a.b\nimport x.y.Z\n//test\n<caret>", Stream.of("class", "import"), Stream.of(JactlUtils.BUILTIN_TYPES), Stream.of(JactlUtils.BEGINNING_KEYWORDS), Functions.getGlobalFunctionNames().stream(), globalVars.stream());
+    test("class X{}; <caret>", Stream.of("class", "X", "X.fromJson"), Stream.of(JactlUtils.BUILTIN_TYPES), Stream.of(JactlUtils.BEGINNING_KEYWORDS), Functions.getGlobalFunctionNames().stream(), globalVars.stream());
+    test("class X{}; while (true) { <caret>", Stream.of("X", "X.fromJson"), Stream.of(JactlUtils.BUILTIN_TYPES), Stream.of(JactlUtils.BEGINNING_KEYWORDS), Functions.getGlobalFunctionNames().stream(), globalVars.stream());
+    test("class X{}; while (true) { def i = 1\n<caret>", Stream.of("i", "X", "X.fromJson"), Stream.of(JactlUtils.BUILTIN_TYPES), Stream.of(JactlUtils.BEGINNING_KEYWORDS), Functions.getGlobalFunctionNames().stream(), globalVars.stream());
+    test("class X{}; if (true) { <caret>", Stream.of("X", "X.fromJson"), Stream.of(JactlUtils.BUILTIN_TYPES), Stream.of(JactlUtils.BEGINNING_KEYWORDS), Functions.getGlobalFunctionNames().stream(), globalVars.stream());
+    test("class X{}; for (int i; i < 10; i++) { <caret>", Stream.of("i", "X", "X.fromJson"), Stream.of(JactlUtils.BUILTIN_TYPES), Stream.of(JactlUtils.BEGINNING_KEYWORDS), Functions.getGlobalFunctionNames().stream(), globalVars.stream());
+
+    // Globals not supported in class files:
+    testWithFileName("org/X.jactl", "package org; class X{ static def func() {1}; X x; def f(int i) { <caret>", Stream.of("x", "i", "X", "func", "fromJson", "f", "this"), Stream.of(JactlUtils.BUILTIN_TYPES), Stream.of(JactlUtils.BEGINNING_KEYWORDS), Functions.getGlobalFunctionNames().stream());
+    testWithFileName("org/X.jactl", "package org; class X{ static def func() {1}; X x; def f(int i) { <caret> } }", Stream.of("x", "i", "X", "func", "fromJson", "f", "this"), Stream.of(JactlUtils.BUILTIN_TYPES), Stream.of(JactlUtils.BEGINNING_KEYWORDS), Functions.getGlobalFunctionNames().stream());
   }
 
   @Test public void testImport() {
@@ -516,7 +550,7 @@ public class CompletionTests extends BasePlatformTestCase {
     testIncludes("//test\npackage a.b.c\n//test\n<caret>", "import");
     testIncludes("<caret>", "import");
     testExcludes("def x = 1; <caret>", "import");
-    test("import <caret>", Stream.of("static", "TopLevel", "org"));
+    test("import <caret>", Stream.of("static", "org"));
     test("import org<caret>", Stream.of());
     test("import org.<caret>", Stream.of("test", "test2"));
     test("import org.<caret>\ndef x = 1", Stream.of("test", "test2"));
@@ -525,7 +559,7 @@ public class CompletionTests extends BasePlatformTestCase {
     test("import org.test.AClass.<caret>", Stream.of("B", "C"));
     test("import org.test.AClass.<caret> as XXX", Stream.of("B", "C"));
     test("import org.test.AClass.<caret> as XXX", Stream.of("B", "C"));
-    test("import static <caret>", Stream.of("TopLevel", "org"));
+    test("import static <caret>", Stream.of("org"));
     test("import static org<caret>", Stream.of());
     test("import static org.<caret>", Stream.of("test", "test2"));
     test("import static org.<caret>\ndef x = 1", Stream.of("test", "test2"));
@@ -535,7 +569,7 @@ public class CompletionTests extends BasePlatformTestCase {
     test("import static org.test.AClass.<caret> as JJJ", Stream.of("B", "C", "VALUE", "fromJson", "func"));
     test("import static org.test.AClass.B.<caret> as JJJ", Stream.of("XXX", "BBB", "fromJson"));
     test("import static org.test.AClass.B.XXX.<caret> as JJJ", Stream.of("xxxfunc", "fromJson"));
-    test("import org.test.AClass; <caret>", classesWithFromJson("AClass", "TopLevel"), Stream.of("AClass.func", "TopLevel.staticFunc", "class", "import"), Stream.of(JactlUtils.BUILTIN_TYPES), Stream.of(JactlUtils.BEGINNING_KEYWORDS), Functions.getGlobalFunctionNames().stream());
+    test("import org.test.AClass; <caret>", Stream.of("AClass", "AClass.fromJson", "AClass.func", "class", "import"), Stream.of(JactlUtils.BUILTIN_TYPES), Stream.of(JactlUtils.BEGINNING_KEYWORDS), Functions.getGlobalFunctionNames().stream(), globalVars.stream());
   }
 
   @Test public void testPackage() {
@@ -580,21 +614,21 @@ public class CompletionTests extends BasePlatformTestCase {
   }
 
   @Test public void testCastAndAs() {
-    test("class X{}; def x; x as <caret>", Stream.of("TopLevel", "X"), Stream.of(JactlUtils.BUILTIN_TYPES));
-    test("class X{}; def x; (<caret>", classesWithFromJson("TopLevel", "X"), Stream.of("TopLevel.staticFunc", "x"), Stream.of(JactlUtils.BUILTIN_TYPES), Functions.getGlobalFunctionNames().stream());
-    test("class X{}; def x; x = (<caret>", classesWithFromJson("TopLevel", "X"), Stream.of("TopLevel.staticFunc", "x"), Stream.of(JactlUtils.BUILTIN_TYPES), Functions.getGlobalFunctionNames().stream());
-    test("class X{}; def x; x = 3 + (<caret>", classesWithFromJson("TopLevel", "X"), Stream.of("TopLevel.staticFunc", "x"), Stream.of(JactlUtils.BUILTIN_TYPES), Functions.getGlobalFunctionNames().stream());
-    test("class X{}; def x; x = 3 * (2 + (<caret>", classesWithFromJson("TopLevel", "X"), Stream.of("TopLevel.staticFunc", "x"), Stream.of(JactlUtils.BUILTIN_TYPES), Functions.getGlobalFunctionNames().stream());
-    test("class X{}; def x; (<caret>)", Stream.of("TopLevel", "X"), Stream.of(JactlUtils.BUILTIN_TYPES));
-    test("class X{}; def x; (<caret>)x", Stream.of("TopLevel", "X"), Stream.of(JactlUtils.BUILTIN_TYPES));
-    test("class X{}; def x; if (true) { x++; x as <caret>", Stream.of("TopLevel", "X"), Stream.of(JactlUtils.BUILTIN_TYPES));
-    test("class X{}; def x; if (true) { x++; (<caret>", classesWithFromJson("TopLevel", "X"), Stream.of("TopLevel.staticFunc", "x"), Stream.of(JactlUtils.BUILTIN_TYPES), Functions.getGlobalFunctionNames().stream());
-    test("class X{}; def x; if (true) { x++; x = (<caret>", classesWithFromJson("TopLevel", "X"), Stream.of("TopLevel.staticFunc", "x"), Stream.of(JactlUtils.BUILTIN_TYPES), Functions.getGlobalFunctionNames().stream());
-    test("class X{}; def x; if (true) { x++; x = 3 + (<caret>", classesWithFromJson("TopLevel", "X"), Stream.of("TopLevel.staticFunc", "x"), Stream.of(JactlUtils.BUILTIN_TYPES), Functions.getGlobalFunctionNames().stream());
-    test("class X{}; def x; if (true) { x++; x = true ? 3 * (2 + (<caret>", classesWithFromJson("TopLevel", "X"), Stream.of("TopLevel.staticFunc", "x"), Stream.of(JactlUtils.BUILTIN_TYPES), Functions.getGlobalFunctionNames().stream());
-    test("class X{}; def x; if (true) { x++; x = true ? 4 : 3 * (2 + (<caret>", classesWithFromJson("TopLevel", "X"), Stream.of("TopLevel.staticFunc", "x"), Stream.of(JactlUtils.BUILTIN_TYPES), Functions.getGlobalFunctionNames().stream());
-    test("class X{}; def x; if (true) { x++; (<caret>)", Stream.of("TopLevel", "X"), Stream.of(JactlUtils.BUILTIN_TYPES));
-    test("class X{}; def x; if (true) { x++; (<caret>)x", Stream.of("TopLevel", "X"), Stream.of(JactlUtils.BUILTIN_TYPES));
+    test("class X{}; def x; x as <caret>", Stream.of("X"), Stream.of(JactlUtils.BUILTIN_TYPES));
+    test("class X{}; def x; (<caret>", classesWithFromJson("X"), Stream.of("x"), Stream.of(JactlUtils.BUILTIN_TYPES), Functions.getGlobalFunctionNames().stream(), globalVars.stream());
+    test("class X{}; def x; x = (<caret>", classesWithFromJson("X"), Stream.of("x"), Stream.of(JactlUtils.BUILTIN_TYPES), Functions.getGlobalFunctionNames().stream(), globalVars.stream());
+    test("class X{}; def x; x = 3 + (<caret>", classesWithFromJson("X"), Stream.of("x"), Stream.of(JactlUtils.BUILTIN_TYPES), Functions.getGlobalFunctionNames().stream(), globalVars.stream());
+    test("class X{}; def x; x = 3 * (2 + (<caret>", classesWithFromJson("X"), Stream.of("x"), Stream.of(JactlUtils.BUILTIN_TYPES), Functions.getGlobalFunctionNames().stream(), globalVars.stream());
+    test("class X{}; def x; (<caret>)", Stream.of("X"), Stream.of(JactlUtils.BUILTIN_TYPES));
+    test("class X{}; def x; (<caret>)x", Stream.of("X"), Stream.of(JactlUtils.BUILTIN_TYPES));
+    test("class X{}; def x; if (true) { x++; x as <caret>", Stream.of("X"), Stream.of(JactlUtils.BUILTIN_TYPES));
+    test("class X{}; def x; if (true) { x++; (<caret>", classesWithFromJson("X"), Stream.of("x"), Stream.of(JactlUtils.BUILTIN_TYPES), Functions.getGlobalFunctionNames().stream(), globalVars.stream());
+    test("class X{}; def x; if (true) { x++; x = (<caret>", classesWithFromJson("X"), Stream.of("x"), Stream.of(JactlUtils.BUILTIN_TYPES), Functions.getGlobalFunctionNames().stream(), globalVars.stream());
+    test("class X{}; def x; if (true) { x++; x = 3 + (<caret>", classesWithFromJson("X"), Stream.of("x"), Stream.of(JactlUtils.BUILTIN_TYPES), Functions.getGlobalFunctionNames().stream(), globalVars.stream());
+    test("class X{}; def x; if (true) { x++; x = true ? 3 * (2 + (<caret>", classesWithFromJson("X"), Stream.of("x"), Stream.of(JactlUtils.BUILTIN_TYPES), Functions.getGlobalFunctionNames().stream(), globalVars.stream());
+    test("class X{}; def x; if (true) { x++; x = true ? 4 : 3 * (2 + (<caret>", classesWithFromJson("X"), Stream.of("x"), Stream.of(JactlUtils.BUILTIN_TYPES), Functions.getGlobalFunctionNames().stream(), globalVars.stream());
+    test("class X{}; def x; if (true) { x++; (<caret>)", Stream.of("X"), Stream.of(JactlUtils.BUILTIN_TYPES));
+    test("class X{}; def x; if (true) { x++; (<caret>)x", Stream.of("X"), Stream.of(JactlUtils.BUILTIN_TYPES));
 
     testInOrgTest("class X{}; def x; x as <caret>", Stream.of("X", "XYZ", "AClass"), Stream.of(JactlUtils.BUILTIN_TYPES));
   }

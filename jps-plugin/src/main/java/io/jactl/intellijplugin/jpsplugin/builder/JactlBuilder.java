@@ -18,7 +18,6 @@
 package io.jactl.intellijplugin.jpsplugin.builder;
 
 import io.jactl.*;
-import io.jactl.Utils;
 import io.jactl.compiler.ClassCompiler;
 import io.jactl.compiler.ScriptCompiler;
 import io.jactl.intellijplugin.common.JactlBundle;
@@ -42,11 +41,11 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.Function;
 
 public class JactlBuilder extends ModuleLevelBuilder {
   protected JactlBuilder() {
@@ -54,7 +53,7 @@ public class JactlBuilder extends ModuleLevelBuilder {
   }
 
   @Override
-  public ExitCode build(CompileContext compileContext, ModuleChunk moduleChunk, DirtyFilesHolder<JavaSourceRootDescriptor, ModuleBuildTarget> dirtyFilesHolder, OutputConsumer outputConsumer) throws ProjectBuildException, IOException {
+  public ExitCode build(CompileContext compileContext, ModuleChunk moduleChunk, DirtyFilesHolder<JavaSourceRootDescriptor, ModuleBuildTarget> dirtyFilesHolder, OutputConsumer outputConsumer) throws IOException {
     Map<String,ClassDescriptor> parsedClasses   = new HashMap<>();
     dirtyFilesHolder.processDirtyFiles((target, file, sourceRoot) -> {
       if (file.getPath().endsWith(JactlPlugin.DOT_SUFFIX)) {
@@ -65,7 +64,7 @@ public class JactlBuilder extends ModuleLevelBuilder {
           error(compileContext, "File " + sourcePath + " should be under root " + rootPath, sourcePath);
           return true;
         }
-        String relativePath = sourcePath.substring(rootPath.length() + 1);
+        String relativePath = JactlPlugin.stripSeparatedPrefix(sourcePath, rootPath, File.separator);
         int    slashIdx     = relativePath.lastIndexOf(File.separatorChar);
         String className    = relativePath.substring(slashIdx + 1);
         String pkgName      = relativePath.substring(0, slashIdx <= 0 ? 0 : slashIdx).replace(File.separatorChar, '.');
@@ -182,7 +181,7 @@ public class JactlBuilder extends ModuleLevelBuilder {
     // We need to find the file containing the class.
     // First we get the directory part of the name.
     String dir      = JactlPlugin.dirName(internalName);
-    String fileBase = internalName.substring(dir.isEmpty() ? 0 : dir.length() + 1);
+    String fileBase = JactlPlugin.stripSeparatedPrefix(internalName, dir, "/");
 
     // If there is a '$' then it is an inner class, so we strip everything from the dollar
     // onwards to get the containing class name
@@ -197,7 +196,7 @@ public class JactlBuilder extends ModuleLevelBuilder {
     fileBase = fileBase + JactlPlugin.DOT_SUFFIX;    // add '.jactl'
 
     // Strip io/jactl/pkg from dir
-    dir = dir.startsWith(baseJavaPkgFile) ? dir.substring(baseJavaPkgFile.length() + 1) : dir;
+    dir = JactlPlugin.stripSeparatedPrefix(dir, baseJavaPkgFile, "/");
     final String fileName = fileBase;
     final String dirName  = dir;
     // Find file in sourceRoots
@@ -227,16 +226,16 @@ public class JactlBuilder extends ModuleLevelBuilder {
     compileContext.processMessage(new CompilerMessage(getBuilderName(), BuildMessage.Kind.ERROR, msg, sourcePath));
   }
 
-  private void error(CompileContext compileContext, CompileError e, String sourcePath) {
-    compileContext.processMessage(new CompilerMessage(getBuilderName(),
-                                                      BuildMessage.Kind.ERROR,
-                                                      e.getErrorMessage(),
-                                                      sourcePath,
-                                                      e.getLocation().getOffset(),
-                                                      e.getLocation().getOffset() + 1,
-                                                      e.getLocation().getOffset(),
-                                                      e.getLocation().getLineNum(),
-                                                      e.getLocation().getColumn()));
+  private void error(CompileContext compileContext, CompileError err, String sourcePath) {
+    err.getErrors().forEach(e -> compileContext.processMessage(new CompilerMessage(getBuilderName(),
+                                                                                   BuildMessage.Kind.ERROR,
+                                                                                   e.getErrorMessage(),
+                                                                                   sourcePath,
+                                                                                   e.getLocation().getOffset(),
+                                                                                   e.getLocation().getOffset() + 1,
+                                                                                   e.getLocation().getOffset(),
+                                                                                   e.getLocation().getLineNum(),
+                                                                                   e.getLocation().getColumn())));
   }
 
   private Stmt.ClassDecl parseAndResolve(CompileContext compileContext, String sourcePath, String className, String packageName, JactlContext jactlContext) {
@@ -275,19 +274,22 @@ public class JactlBuilder extends ModuleLevelBuilder {
         return null;
       }
 
-      // Get list of predefined globals from compileContext somehow?
-      Resolver           resolver = new Resolver(jactlContext, Utils.mapOf(), script.location);
+      var settings = JpsJactlSettings.getSettings(compileContext.getProjectDescriptor().getProject());
+      Map<String,Object> globals = settings.getGlobals();
+
+      Resolver           resolver = new Resolver(jactlContext, globals, script.location);
       List<CompileError> errs     = resolver.resolveScriptOrClass(script, true, scriptName, packageName);
-      if (!errs.isEmpty()) {
-        errs.forEach(e -> error(compileContext, e, sourcePath));
-        return null;
+      if (errs.isEmpty()) {
+        return script;
       }
-      return script;
+      errs.forEach(e -> error(compileContext, e, sourcePath));
+    }
+    catch (GlobalsException error) {
+      error(compileContext, error.getMessage(), error.getGlobalsScriptPath());
     }
     catch (CompileError error) {
-      error.printStackTrace();
       error(compileContext, error, sourcePath);
-      return null;
     }
+    return null;
   }
 }

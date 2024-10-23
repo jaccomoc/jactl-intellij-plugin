@@ -1,12 +1,8 @@
 package io.jactl.intellijplugin;
 
 import com.intellij.openapi.command.WriteCommandAction;
-import com.intellij.openapi.project.Project;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.psi.*;
-import com.intellij.psi.search.FilenameIndex;
-import com.intellij.psi.search.GlobalSearchScope;
-import com.intellij.refactoring.move.MoveCallback;
 import com.intellij.refactoring.move.moveFilesOrDirectories.MoveFilesOrDirectoriesProcessor;
 import com.intellij.testFramework.fixtures.BasePlatformTestCase;
 import io.jactl.intellijplugin.extensions.JactlMoveFileHandler;

@@ -29,7 +29,6 @@ import io.jactl.intellijplugin.JactlUtils;
 import io.jactl.intellijplugin.psi.*;
 import io.jactl.intellijplugin.psi.impl.JactlPsiIdentifierImpl;
 import io.jactl.intellijplugin.psi.impl.JactlPsiTypeImpl;
-import io.jactl.intellijplugin.psi.interfaces.JactlPsiIdentifier;
 import io.jactl.intellijplugin.psi.interfaces.JactlPsiName;
 import org.jetbrains.annotations.NotNull;
 
@@ -45,7 +44,7 @@ public class JactlHighlightAnnotator implements Annotator {
 
     JactlPsiElement ancestor = (JactlPsiElement)JactlUtils.getAncestor(element, JactlPsiElement.class);
     if (ancestor != null) {
-      JactlParserAdapter.getErrors(ancestor.getFile(), ancestor.getSourceCode(), element.getNode().getStartOffset())
+      JactlParserAdapter.getErrors(ancestor.getFile(), ancestor.getSourceCode(), element.getNode())
                         .forEach(error);
     }
 
