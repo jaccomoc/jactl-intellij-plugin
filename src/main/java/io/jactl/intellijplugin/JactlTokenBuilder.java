@@ -225,6 +225,13 @@ public class JactlTokenBuilder extends BuilderImpl {
     }
 
     @Override
+    public void doneExpr(Expr expr) {
+      type = JactlExprElementType.RHS_EXPR;
+      this.astNode = expr;
+      _done(expr);
+    }
+
+    @Override
     public void done(Stmt stmt) {
       if (stmt == null) {
         drop();

@@ -14,8 +14,25 @@
        Simple HTML elements (text formatting, paragraphs, and lists) can be added inside of <![CDATA[ ]]> tag.
        Guidelines: https://plugins.jetbrains.com/docs/marketplace/plugin-overview-page.html#plugin-description -->
   <description><![CDATA[
-    Intellij plugin for the Jactl language.<br>
-    <em>A non-blocking, secure scripting language for the JVM platform with syntax based on the best bits of Groovy and Perl.</em>
+    Intellij plugin for the <a href="https://jactl.io">Jactl language</a>.<br>
+    <em>Jactl is a powerful, secure scripting language for the JVM platform with syntax based on the best bits of Groovy and Perl.</em>
+    <p>
+    The plugin provides the following features:
+    <ul>
+      <li>Syntax colouring</li>
+      <li>Error highlighting</li>
+      <li>Intelligent indenting</li>
+      <li>Code reformat</li>
+      <li>Completions</li>
+      <li>Show definition/show usages navigation</li>
+      <li>Comment/uncomment selected code</li>
+      <li>Rename refactoring</li>
+      <li>Move file/move directory refactoring</li>
+      <li>Paired brace matching</li>
+      <li>Build/run/debug support</li>
+    </ul>
+    </p>
+    <p><a href="https://jactl.io">Further information</a></p>
   ]]></description>
 
   <!-- Product and plugin compatibility requirements.

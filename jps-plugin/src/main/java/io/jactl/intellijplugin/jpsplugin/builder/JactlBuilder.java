@@ -18,6 +18,7 @@
 package io.jactl.intellijplugin.jpsplugin.builder;
 
 import io.jactl.*;
+import io.jactl.Utils;
 import io.jactl.compiler.ClassCompiler;
 import io.jactl.compiler.ScriptCompiler;
 import io.jactl.intellijplugin.common.JactlBundle;
@@ -46,6 +47,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
 
 public class JactlBuilder extends ModuleLevelBuilder {
   protected JactlBuilder() {
@@ -111,7 +113,7 @@ public class JactlBuilder extends ModuleLevelBuilder {
               try (OutputStream stream = new FileOutputStream(outputFile)) {
                 stream.write(bytes);
               }
-              outputConsumer.registerCompiledClass(target, new CompiledClass(outputFile, List.of(sourceFile), descriptor.getJavaPackagedName(), new BinaryContent(bytes)));
+              outputConsumer.registerCompiledClass(target, new CompiledClass(outputFile, Utils.listOf(sourceFile), descriptor.getJavaPackagedName(), new BinaryContent(bytes)));
             }
             catch (IOException e) {
               error(compileContext, e.getMessage());
@@ -124,7 +126,7 @@ public class JactlBuilder extends ModuleLevelBuilder {
 
   @Override
   public @NotNull List<String> getCompilableFileExtensions() {
-    return List.of(JactlPlugin.SUFFIX);
+    return Utils.listOf(JactlPlugin.SUFFIX);
   }
 
   @Override
@@ -146,7 +148,7 @@ public class JactlBuilder extends ModuleLevelBuilder {
                                           .stream()
                                           .flatMap(module -> module.getSourceRoots().stream().map(JpsModuleSourceRoot::getPath))
                                           .map(Path::toString)
-                                          .toList();
+                                          .collect(Collectors.toList());
 
     String baseJavaPkg     = JactlPlugin.BASE_JACTL_PKG;   // Should come from project configuration?
     String baseJavaPkgFile = JactlPlugin.BASE_JACTL_PKG_PATH;

@@ -57,18 +57,18 @@ public class JactlCompletionContributor extends CompletionContributor {
 
   List<LookupElementBuilder> builtinTypeLookups = Stream.of(JactlUtils.BUILTIN_TYPES)
                                                         .map(type -> LookupElementBuilder.create(type).withIcon(AllIcons.Nodes.Type))
-                                                        .toList();
+                                                        .collect(Collectors.toList());
 
   List<LookupElementBuilder> beginningKeywords = Stream.of(JactlUtils.BEGINNING_KEYWORDS)
                                                        .map(LookupElementBuilder::create)
-                                                       .toList();
+                                                       .collect(Collectors.toList());
 
   public JactlCompletionContributor() {
     List<LookupElementBuilder> globalFunctionNames = Functions.getGlobalFunctionNames()
                                                               .stream()
                                                               .map(Functions::getGlobalFunDecl)
                                                               .map(JactlCompletionContributor::createFunctionLookup)
-                                                              .toList();
+                                                              .collect(Collectors.toList());
 
     // We have an identifier in an expression not immediately after a '.' or '?.'
     // Add all visible variables/fields, functions/methods, global functions, and any class static functions we can find.
@@ -86,11 +86,11 @@ public class JactlCompletionContributor extends CompletionContributor {
                JactlPsiElement       grandParent      = (JactlPsiElement) parent.getParent();
                List<ClassDescriptor> classDescriptors = JactlParserAdapter.getClasses(parent.getFile(), parent.getSourceCode(), grandParent.getAstKey());
                ClassDescriptor       owningClass      = JactlParserAdapter.getClass(parent.getFile(), parent.getSourceCode(), parent.getAstKey());
-               List<ClassDescriptor> baseClasses = owningClass == null ? List.of()
-                                                                       : Stream.concat(Stream.of(owningClass), JactlUtils.stream(owningClass, ClassDescriptor::getBaseClass)).toList();
+               List<ClassDescriptor> baseClasses = owningClass == null ? Utils.listOf()
+                                                                       : Stream.concat(Stream.of(owningClass), JactlUtils.stream(owningClass, ClassDescriptor::getBaseClass)).collect(Collectors.toList());
                Runnable addTypes = () -> {
                  result.addAllElements(builtinTypeLookups);
-                 result.addAllElements(classDescriptors.stream().map(JactlCompletionContributor::createLookup).toList());
+                 result.addAllElements(classDescriptors.stream().map(JactlCompletionContributor::createLookup).collect(Collectors.toList()));
                };
 
                // If we are only identifier in expr then we need to add built-in types and any visible
@@ -144,7 +144,7 @@ public class JactlCompletionContributor extends CompletionContributor {
                result.addAllElements(JactlParserAdapter.getVariablesAndFunctions(parent.getFile(), parent.getSourceCode(), parent.getAstKey())
                                                        .stream()
                                                        .map(JactlCompletionContributor::createLookup)
-                                                       .toList());
+                                                       .collect(Collectors.toList()));
 
                // Add class static methods for other classes (not our class or one of our base classes)
                result.addAllElements(classDescriptors.stream()
@@ -152,7 +152,7 @@ public class JactlCompletionContributor extends CompletionContributor {
                                                      .flatMap(descriptor -> descriptor.getAllMethods()
                                                                                       .filter(entry -> entry.getValue().isStatic)
                                                                                       .map(entry -> createStaticFunctionLookup(descriptor, entry.getValue())))
-                                                     .toList());
+                                                     .collect(Collectors.toList()));
 
                // Add any global variables if we are in a script
                JactlFile file = element.getFile();
@@ -233,7 +233,7 @@ public class JactlCompletionContributor extends CompletionContributor {
                  result.addAllElements(JactlUtils.packageContents(element.getProject(), path)
                                                  .stream()
                                                  .map(entry -> createClassOrPackageLookup(path, entry))
-                                                 .toList());
+                                                 .collect(Collectors.toList()));
                }
              }
            });
@@ -245,7 +245,7 @@ public class JactlCompletionContributor extends CompletionContributor {
              @Override protected void addCompletions(@NotNull CompletionParameters parameters, @NotNull ProcessingContext context, @NotNull CompletionResultSet result) {
                result.addAllElements(Stream.of(JactlUtils.SIMPLE_TYPES)
                                            .map(type -> LookupElementBuilder.create(type).withIcon(AllIcons.Nodes.Type))
-                                           .toList());
+                                           .collect(Collectors.toList()));
              }
            });
 
@@ -275,20 +275,20 @@ public class JactlCompletionContributor extends CompletionContributor {
                                                           .filter(entry -> type.is(JactlType.INSTANCE) || entry.getValue().isStatic)
                                                           .map(Map.Entry::getValue)
                                                           .map(JactlCompletionContributor::createFunctionLookup)
-                                                          .toList());
+                                                          .collect(Collectors.toList()));
                      // Add fields if instance
                      if (type.is(JactlType.INSTANCE)) {
                        result.addAllElements(classDescriptor.getAllFieldsStream()
                                                             .map(entry -> LookupElementBuilder.create(entry.getKey())
                                                                                               .withTypeText(entry.getValue().toString()))
-                                                            .toList());
+                                                            .collect(Collectors.toList()));
                      }
                      else {
                        // Add inner classes if class
                        result.addAllElements(classDescriptor.getInnerClasses()
                                                             .stream()
                                                             .map(JactlCompletionContributor::createLookup)
-                                                            .toList());
+                                                            .collect(Collectors.toList()));
                      }
                    }
                    // Add any builtin methods based on type or on last assigned type if we have a variable
@@ -296,14 +296,14 @@ public class JactlCompletionContributor extends CompletionContributor {
                      List<FunctionDescriptor> builtinMethods = Functions.getAllMethods(type);
                      result.addAllElements(builtinMethods.stream()
                                                          .map(JactlCompletionContributor::createFunctionLookup)
-                                                         .toList());
+                                                         .collect(Collectors.toList()));
                      // Add any additional methods based on last type assigned to variable
                      if (jactlExpr.left instanceof Expr.Identifier) {
                        Expr.Identifier identifier       = (Expr.Identifier) jactlExpr.left;
                        JactlType       lastAssignedType = identifier.varDecl != null ? identifier.varDecl.lastAssignedType : null;
                        if (lastAssignedType != null && !type.equals(lastAssignedType)){
-                         List<FunctionDescriptor> newMethods = Functions.getAllMethods(lastAssignedType).stream().filter(f -> builtinMethods.stream().noneMatch(b -> b.name.equals(f.name))).toList();
-                         result.addAllElements(newMethods.stream().map(JactlCompletionContributor::createFunctionLookup).toList());
+                         List<FunctionDescriptor> newMethods = Functions.getAllMethods(lastAssignedType).stream().filter(f -> builtinMethods.stream().noneMatch(b -> b.name.equals(f.name))).collect(Collectors.toList());
+                         result.addAllElements(newMethods.stream().map(JactlCompletionContributor::createFunctionLookup).collect(Collectors.toList()));
                        }
                      }
 
@@ -325,7 +325,7 @@ public class JactlCompletionContributor extends CompletionContributor {
                                                .stream()
                                                .filter(entry -> entry.isPackage())
                                                .map(entry -> createClassOrPackageLookup("", entry))
-                                               .toList());
+                                               .collect(Collectors.toList()));
                // If we don't already have 'static' then add it
                if (JactlUtils.getFirstChild(element.getParent(), JactlTokenTypes.STATIC) == null) {
                  result.addElement(LookupElementBuilder.create(TokenType.STATIC.asString));
@@ -357,7 +357,7 @@ public class JactlCompletionContributor extends CompletionContributor {
                    result.addAllElements(JactlUtils.packageContents(element.getProject(), packageName)
                                                    .stream()
                                                    .map(entry -> createClassOrPackageLookup(packageName, entry))
-                                                   .toList());
+                                                   .collect(Collectors.toList()));
                  }
                }
                else {
@@ -374,19 +374,19 @@ public class JactlCompletionContributor extends CompletionContributor {
                  if (classDecl != null) {
                    result.addAllElements(classDecl.innerClasses.stream()
                                                                .map(inner -> createLookup(inner.name.getStringValue(), parentClass))
-                                                               .toList());
+                                                               .collect(Collectors.toList()));
                    if (JactlUtils.getFirstChild(importStmt, JactlTokenTypes.STATIC) != null) {
                      result.addAllElements(classDecl.methods.stream()
                                                             .map(funDecl -> funDecl.declExpr)
                                                             .filter(Expr.FunDecl::isStatic)
                                                             .map(funDecl -> funDecl.varDecl)
                                                             .map(decl -> createLookup(decl, false))
-                                                            .toList());
+                                                            .collect(Collectors.toList()));
                      result.addAllElements(classDecl.fields.stream()
                                                            .map(decl -> decl.declExpr)
                                                            .filter(declExpr -> declExpr.isConstVar)
                                                            .map(JactlCompletionContributor::createLookup)
-                                                           .toList());
+                                                           .collect(Collectors.toList()));
                    }
                  }
                }
@@ -407,7 +407,7 @@ public class JactlCompletionContributor extends CompletionContributor {
                                                  .stream()
                                                  .filter(JactlUtils.PackageEntry::isPackage)
                                                  .map(entry -> createClassOrPackageLookup(packageName, entry))
-                                                 .toList());
+                                                 .collect(Collectors.toList()));
                }
              }
            });
@@ -425,7 +425,7 @@ public class JactlCompletionContributor extends CompletionContributor {
                                             .stream()
                                             .filter(descriptor -> !descriptor.getClassName().equals(excludeName))
                                             .map(JactlCompletionContributor::createLookup)
-                                            .toList());
+                                            .collect(Collectors.toList()));
   }
 
   private static LookupElementBuilder createLookup(String name, String text) {

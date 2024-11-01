@@ -24,6 +24,7 @@ import com.intellij.psi.PsiFile;
 import com.intellij.testFramework.ServiceContainerUtil;
 import com.intellij.testFramework.fixtures.BasePlatformTestCase;
 import io.jactl.JactlType;
+import io.jactl.Utils;
 import io.jactl.intellijplugin.extensions.settings.JactlConfiguration;
 import io.jactl.intellijplugin.jpsplugin.builder.JpsJactlSettings;
 import io.jactl.runtime.Functions;
@@ -38,6 +39,7 @@ import java.net.URL;
 import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class CompletionTests extends BasePlatformTestCase {
@@ -64,7 +66,7 @@ public class CompletionTests extends BasePlatformTestCase {
       outputStream.write("[ aaa:'value of aaa', bbb:'value of bbb' ]".getBytes());
       outputStream.flush();
     }
-    globalVars = List.of("aaa", "bbb");
+    globalVars = Utils.listOf("aaa", "bbb");
     JpsJactlSettings settings = new JpsJactlSettings();
     settings.globalVariablesScript = temp.getAbsolutePath();
     jactlConfiguration.loadState(settings);
@@ -126,7 +128,7 @@ public class CompletionTests extends BasePlatformTestCase {
     PsiFile psiFile = myFixture.configureByFile(fileName);
     try {
       LookupElement[] result = myFixture.completeBasic();
-      List<String>    items  = result == null ? List.of() : Arrays.stream(result).map(LookupElement::getLookupString).sorted().toList();
+      List<String>    items  = result == null ? Utils.listOf() : Arrays.stream(result).map(LookupElement::getLookupString).sorted().collect(Collectors.toList());
       switch (matchType) {
         case INCLUDES:
           Arrays.stream(expected).forEach(e -> assertTrue("Missing '" + e + "' in " + items, items.contains(e)));
@@ -139,7 +141,7 @@ public class CompletionTests extends BasePlatformTestCase {
             assertTrue("Expected no entries but got : " + items, items.isEmpty());
           }
           else {
-            assertEquals(Arrays.stream(expected).sorted().toList(), items);
+            assertEquals(Arrays.stream(expected).sorted().collect(Collectors.toList()), items);
           }
           break;
       }

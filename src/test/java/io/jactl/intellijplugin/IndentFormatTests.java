@@ -1,14 +1,17 @@
 package io.jactl.intellijplugin;
 
+import com.github.weisj.jsvg.a;
 import com.intellij.openapi.command.WriteCommandAction;
 import com.intellij.psi.codeStyle.CodeStyleManager;
 import com.intellij.testFramework.EditorTestUtil;
 import com.intellij.testFramework.fixtures.BasePlatformTestCase;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
 import static com.intellij.testFramework.EditorTestUtil.BACKSPACE_FAKE_CHAR;
 
@@ -28,6 +31,24 @@ public class IndentFormatTests extends BaseTypingTestCase {
 
   public void testSimpleFunDeclBraceReformat() {
     String text = "def f() {<caret>";
+    myFixture.configureByText("script.jactl", text);
+    performTyping("\n");
+    verify("def f() {\n    \n}");
+    performTyping("x++\n");
+    verify("def f() {\n    x++\n    \n}");
+    performTyping("    x");
+    verify("def f() {\n    x++\n        x\n}");
+    move(2);
+    backspace(1);
+    verify("def f() {\n    x++\n        x\n");
+    performTyping("}");
+    verify("def f() {\n    x++\n    x\n}");
+    reformat();
+    verify("def f() {\n    x++\n    x\n}");
+  }
+
+  public void testSimpleFunDeclBraceReformat2() {
+    String text = "def f() {<caret>}";
     myFixture.configureByText("script.jactl", text);
     performTyping("\n");
     verify("def f() {\n    \n}");
@@ -149,9 +170,9 @@ public class IndentFormatTests extends BaseTypingTestCase {
     verify("def f = {\n    \n}");
     performTyping("long x,");
     performTyping("\n");
-    verify("def f = {\n    long x,\n    \n}");
+    verify("def f = {\n    long x,\n         \n}");
     performTyping("long y,\ndef z ->\n");
-    verify("def f = {\n    long x,\n    long y,\n    def z ->\n    \n}");
+    verify("def f = {\n    long x,\n         long y,\n    def z ->\n    \n}");
     reformat();
     verify("def f = {\n    long x,\n    long y,\n    def z ->\n    \n}");
   }
@@ -164,9 +185,9 @@ public class IndentFormatTests extends BaseTypingTestCase {
     verify(fixed + "f({\n    \n})");
     performTyping("long x,");
     performTyping("\n");
-    verify(fixed + "f({\n    long x,\n    \n})");
+    verify(fixed + "f({\n    long x,\n         \n})");
     performTyping("long y,\ndef z ->\n");
-    verify(fixed + "f({\n    long x,\n    long y,\n    def z ->\n    \n})");
+    verify(fixed + "f({\n    long x,\n         long y,\n    def z ->\n    \n})");
     reformat();
     verify(fixed + "f({\n    long x,\n    long y,\n    def z ->\n    \n})");
   }
@@ -179,9 +200,9 @@ public class IndentFormatTests extends BaseTypingTestCase {
     verify(fixed + "f{\n    \n}");
     performTyping("long x,");
     performTyping("\n");
-    verify(fixed + "f{\n    long x,\n    \n}");
+    verify(fixed + "f{\n    long x,\n         \n}");
     performTyping("long y,\ndef z ->\n");
-    verify(fixed + "f{\n    long x,\n    long y,\n    def z ->\n    \n}");
+    verify(fixed + "f{\n    long x,\n         long y,\n    def z ->\n    \n}");
     reformat();
     verify(fixed + "f{\n    long x,\n    long y,\n    def z ->\n    \n}");
   }
@@ -199,6 +220,21 @@ public class IndentFormatTests extends BaseTypingTestCase {
     verify("for (int i = 0;\n     i < 10;\n     i++) {\n    i += 2\n}");
     reformat();
     verify("for (int i = 0;\n     i < 10;\n     i++) {\n    i += 2\n}");
+  }
+
+  public void testForLoop2() {
+    String text = "for (i = 0;<caret>)";
+    myFixture.configureByText("script.jactl", text);
+    performTyping("\n");
+    verify("for (i = 0;\n     )");
+    performTyping("i < 10;\n");
+    verify("for (i = 0;\n     i < 10;\n     )");
+    performTyping("i++) {\n");
+    verify("for (i = 0;\n     i < 10;\n     i++) {\n    \n}");
+    performTyping("i += 2");
+    verify("for (i = 0;\n     i < 10;\n     i++) {\n    i += 2\n}");
+    reformat();
+    verify("for (i = 0;\n     i < 10;\n     i++) {\n    i += 2\n}");
   }
 
   public void testListLiteral() {
@@ -374,6 +410,150 @@ public class IndentFormatTests extends BaseTypingTestCase {
       "}";
     myFixture.configureByText("script.jactl", "");
     performTypingNoSpaces(text);
+    verify(text);
+  }
+
+  public void testBinaryExpressions() {
+    String text =
+      "def x = a.b\n" +
+      "         .c\n" +
+      "         .d\n";
+    myFixture.configureByText("script.jactl", "");
+    performTypingNoSpaces(text);
+    reformat();
+    verify(text);
+  }
+
+  public void testBinaryExpressions2() {
+    String text =
+      "def x = a + b\n" +
+      "          + c\n" +
+      "          + d\n";
+    myFixture.configureByText("script.jactl", "");
+    performTypingNoSpaces(text);
+    reformat();
+    verify(text);
+  }
+
+  public void testBinaryExpressions3() {
+    String text =
+      "(a + b)\n" +
+      "   + c\n";
+    myFixture.configureByText("script.jactl", "");
+    performTypingNoSpaces(text);
+    reformat();
+    verify(text);
+  }
+
+  public void testBinaryExpressions4() {
+    String text =
+      "Decimal xxxx = 1 +\n" +
+      "               2 +\n" +
+      "               3\n";
+    myFixture.configureByText("script.jactl", "");
+    performTypingNoSpaces(text);
+    reformat();
+    verify(text);
+  }
+
+  public void testBinaryExpressions5() {
+    String text =
+      "x = 1 +\n" +
+      "    2 +\n" +
+      "    3\n";
+    myFixture.configureByText("script.jactl", "");
+    performTypingNoSpaces(text);
+    reformat();
+    verify(text);
+  }
+
+  public void testBinaryExpressions6() {
+    String text =
+      "x = 1 + 2\n" +
+      "      + 3\n" +
+      "      + 4\n";
+    myFixture.configureByText("script.jactl", "");
+    performTypingNoSpaces(text);
+    reformat();
+    verify(text);
+  }
+
+  public void testBinaryExpressions7() {
+    String text =
+      "def x = (a+b) + b\n" +
+      "          + (c+d)\n" +
+      "          + d\n";
+    myFixture.configureByText("script.jactl", "");
+    performTypingNoSpaces(text);
+    reformat();
+    verify(text);
+  }
+
+  public void testChainedCalls() {
+    String text =
+      "def x = abc.method1()\n" +
+      "           .filter()\n";
+    myFixture.configureByText("script.jactl", "");
+    performTypingNoSpaces(text);
+    reformat();
+    verify(text);
+  }
+
+  public void testChainedCalls2() {
+    String text =
+      "def x = abc.method1()\n" +
+      "           .filter()\n" +
+      "           .size()\n";
+    myFixture.configureByText("script.jactl", "");
+    performTypingNoSpaces(text);
+    reformat();
+    verify(text);
+  }
+
+  public void testChainedCalls3() {
+    String text =
+      "def x = [1,2,3].map{ it + 1 }\n" +
+      "               .filter{ it != 2 }\n" +
+      "               .size()\n";
+    myFixture.configureByText("script.jactl", "");
+    performTypingNoSpaces(text);
+    reformat();
+    verify(text);
+  }
+
+  public void testChainedCalls4() {
+    String text =
+      "def x = [1,2,3].map{ " +
+      "                 it + 1" +
+      "               }\n" +
+      "               .filter{ it != 2 }\n" +
+      "               .size()\n";
+    myFixture.configureByText("script.jactl", "");
+    performTypingNoSpaces(text);
+    reformat();
+    verify(text);
+  }
+
+  public void testTernary() {
+    String text =
+      "def x = true ? 1 + 2\n" +
+      "             : 3\n";
+    myFixture.configureByText("script.jactl", "");
+    performTypingNoSpaces(text);
+    reformat();
+    verify(text);
+  }
+
+  public void testTernary2() {
+    String text =
+      "def x = 1 +\n" +
+      "        true ? 1 +\n" +
+      "               2\n" +
+      "             : 3 + 2\n" +
+      "                 + 1\n";
+    myFixture.configureByText("script.jactl", "");
+    performTypingNoSpaces(text);
+    reformat();
     verify(text);
   }
 }

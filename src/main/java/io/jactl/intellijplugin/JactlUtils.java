@@ -75,11 +75,11 @@ public class JactlUtils {
   public static List<String> getSourceRoots(Project project) {
     return Arrays.stream(ProjectRootManager.getInstance(project).getContentSourceRoots())
                  .map(VirtualFile::getCanonicalPath)
-                 .toList();
+                 .collect(Collectors.toList());
   }
 
   public static List<VirtualFile> getSourceRootFiles(Project project) {
-    return new ArrayList<>(List.of(ProjectRootManager.getInstance(project).getContentSourceRoots()));
+    return new ArrayList<>(Utils.listOf(ProjectRootManager.getInstance(project).getContentSourceRoots()));
   }
 
   public static <T> int indexOf(T[] elements, T element) {
@@ -426,11 +426,14 @@ public class JactlUtils {
   }
 
   public static boolean isElementType(ASTNode node, IElementType... types) {
+    if (node == null) {
+      return false;
+    }
     return Arrays.stream(types).anyMatch(t -> node.getElementType() == t);
   }
 
   public static boolean isElementType(PsiElement element, IElementType... types) {
-    return element != null && Arrays.stream(types).anyMatch(t -> element.getNode().getElementType() == t);
+    return element != null && Arrays.stream(types).anyMatch(t -> isElementType(element.getNode(),t));
   }
 
   @NotNull

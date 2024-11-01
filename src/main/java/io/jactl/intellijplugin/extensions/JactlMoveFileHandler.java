@@ -24,6 +24,7 @@ import com.intellij.psi.tree.IElementType;
 import com.intellij.refactoring.move.moveFilesOrDirectories.MoveFileHandler;
 import com.intellij.usageView.UsageInfo;
 import com.intellij.util.IncorrectOperationException;
+import io.jactl.Utils;
 import io.jactl.intellijplugin.JactlFile;
 import io.jactl.intellijplugin.JactlUtils;
 import io.jactl.intellijplugin.psi.JactlNameElementType;
@@ -84,7 +85,7 @@ public class JactlMoveFileHandler extends MoveFileHandler {
 
   @Override
   public @Nullable List<UsageInfo> findUsages(PsiFile psiFile, PsiDirectory newParent, boolean searchInComments, boolean searchInNonJavaFiles) {
-    return List.of();
+    return Utils.listOf();
   }
 
   @Override

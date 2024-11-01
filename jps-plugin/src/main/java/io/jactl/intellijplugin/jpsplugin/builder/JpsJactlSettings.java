@@ -18,6 +18,7 @@
 package io.jactl.intellijplugin.jpsplugin.builder;
 
 import io.jactl.intellijplugin.common.JactlPlugin;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.jps.model.JpsElementChildRole;
 import org.jetbrains.jps.model.JpsProject;
 import org.jetbrains.jps.model.ex.JpsElementBase;

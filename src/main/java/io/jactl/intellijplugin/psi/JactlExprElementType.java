@@ -5,6 +5,7 @@ import io.jactl.Expr;
 import io.jactl.intellijplugin.JactlLanguage;
 
 public class JactlExprElementType extends IElementType {
+  public static IElementType RHS_EXPR            = new JactlExprElementType("RHS_EXPR");
   public static IElementType TYPE                = new JactlExprElementType("TYPE");
   public static IElementType IDENTIFIER          = new JactlExprElementType("IDENTIFIER");
   public static IElementType VAR_DECL_EXPR       = new JactlExprElementType("VAR_DECL_EXPR");

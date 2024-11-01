@@ -23,6 +23,10 @@ public class JactlTokenType extends IElementType {
     return tokenTypeMap.get(type);
   }
 
+  public boolean isOperator() {
+    return io.jactl.Utils.isOperator(tokenType);
+  }
+
   @Override public String toString() {
     return "JactlTokenType." + super.toString();
   }

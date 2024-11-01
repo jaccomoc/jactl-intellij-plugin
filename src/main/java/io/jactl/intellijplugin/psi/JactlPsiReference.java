@@ -166,7 +166,7 @@ public class JactlPsiReference extends PsiReferenceBase<PsiElement> implements P
       if (classDecl == null) return null;
       JactlAstKey declarationKey = classDecl.getUserData(JactlAstKey.class);
       if (declarationKey == null) {
-        LOG.warn("Declaration has no AST Key set: declaration=" + classDecl);
+        //LOG.warn("Declaration has no AST Key set: declaration=" + classDecl);
         return null;
       }
       return JactlUtils.getNameElementForPsiElementInTree(declarationKey);
@@ -207,7 +207,7 @@ public class JactlPsiReference extends PsiReferenceBase<PsiElement> implements P
 
     JactlAstKey declarationKey = declaration.getUserData(JactlAstKey.class);
     if (declarationKey == null) {
-      LOG.warn("Declaration has no AST Key set: declaration=" + declaration);
+      //LOG.warn("Declaration has no AST Key set: declaration=" + declaration);
       return null;
     }
 

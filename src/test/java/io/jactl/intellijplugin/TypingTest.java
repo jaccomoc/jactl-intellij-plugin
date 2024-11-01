@@ -2,6 +2,7 @@ package io.jactl.intellijplugin;
 
 import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.testFramework.EditorTestUtil;
+import io.jactl.Utils;
 
 import java.util.List;
 
@@ -110,6 +111,12 @@ public class TypingTest extends BaseTypingTestCase {
     String text = CLASS_DECL;
     myFixture.configureByText("script.jactl", text);
     // Mutate after text entered to make sure that there are no strange exceptions thrown
-    introduceErrors(List.of('{', '}', '[', ']', '(', ')', '\\', '"', '\'', 'a', '1', '.', ';', '\n'));
+    introduceErrors(Utils.listOf('{', '}', '[', ']', '(', ')', '\\', '"', '\'', 'a', '1', '.', ';', '\n'));
+  }
+
+  public void testForLoop() {
+    String text = "for (i = 0; i < 10; i++) {}";
+    myFixture.configureByText("script.jactl", "");
+    performTypingNoSpaces(text);
   }
 }

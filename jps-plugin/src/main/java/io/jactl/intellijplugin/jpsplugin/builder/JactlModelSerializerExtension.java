@@ -18,6 +18,7 @@
 package io.jactl.intellijplugin.jpsplugin.builder;
 
 import com.intellij.util.xmlb.XmlSerializer;
+import io.jactl.Utils;
 import org.jdom.Element;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.jps.model.JpsProject;
@@ -29,7 +30,7 @@ import java.util.List;
 public class JactlModelSerializerExtension extends JpsModelSerializerExtension {
   @Override
   public @NotNull List<? extends JpsProjectExtensionSerializer> getProjectExtensionSerializers() {
-    return List.of(new JpsProjectExtensionSerializer("jactl.xml", "JactlConfiguration") {
+    return Utils.listOf(new JpsProjectExtensionSerializer("jactl.xml", "JactlConfiguration") {
       @Override
       public void loadExtension(@NotNull JpsProject project, @NotNull Element componentTag) {
         JpsJactlSettings configuration = XmlSerializer.deserialize(componentTag, JpsJactlSettings.class);

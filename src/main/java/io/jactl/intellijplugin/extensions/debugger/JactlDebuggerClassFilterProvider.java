@@ -19,13 +19,14 @@ package io.jactl.intellijplugin.extensions.debugger;
 
 import com.intellij.ui.classFilter.ClassFilter;
 import com.intellij.ui.classFilter.DebuggerClassFilterProvider;
+import io.jactl.Utils;
 
 import java.util.ArrayList;
 import java.util.List;
 
 public class JactlDebuggerClassFilterProvider implements DebuggerClassFilterProvider {
-  private final static List<ClassFilter> classFilters = List.of(new ClassFilter("java.*"),
-                                                                new ClassFilter("io.jactl.*"));
+  private final static List<ClassFilter> classFilters = Utils.listOf(new ClassFilter("java.*"),
+                                                                     new ClassFilter("io.jactl.*"));
 
   @Override
   public List<ClassFilter> getFilters() {

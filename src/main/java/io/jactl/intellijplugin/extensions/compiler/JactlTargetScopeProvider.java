@@ -25,6 +25,7 @@ import com.intellij.openapi.project.Project;
 import com.intellij.openapi.module.Module;
 import com.intellij.openapi.roots.ModuleRootManager;
 import com.intellij.openapi.vfs.VirtualFile;
+import io.jactl.Utils;
 import io.jactl.intellijplugin.JactlFileType;
 import io.jactl.intellijplugin.jpsplugin.builder.JactlBuildTarget;
 import org.jetbrains.annotations.NotNull;
@@ -34,26 +35,27 @@ import org.jetbrains.jps.model.java.JavaSourceRootType;
 import org.jetbrains.jps.model.module.JpsModuleSourceRootType;
 
 import java.util.List;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class JactlTargetScopeProvider extends BuildTargetScopeProvider {
   @Override
   public @NotNull List<TargetTypeBuildScope> getBuildTargetScopes(@NotNull CompileScope baseScope, @NotNull Project project, boolean forceBuild) {
-    return List.of(createTargetScope(project, JavaSourceRootType.SOURCE, JactlBuildTarget.PRODUCTION, forceBuild),
-                   createTargetScope(project, JavaSourceRootType.TEST_SOURCE, JactlBuildTarget.TESTS, forceBuild));
+    return Utils.listOf(createTargetScope(project, JavaSourceRootType.SOURCE, JactlBuildTarget.PRODUCTION, forceBuild),
+                        createTargetScope(project, JavaSourceRootType.TEST_SOURCE, JactlBuildTarget.TESTS, forceBuild));
   }
 
   private TargetTypeBuildScope createTargetScope(Project project, JpsModuleSourceRootType<?> rootType, JactlBuildTarget.Type targetType, boolean forceBuild) {
     List<Module> jactlModules = getJactlModules(project, rootType);
     return CmdlineProtoUtil.createTargetsScope(targetType.getTypeId(),
-                                               jactlModules.stream().map(Module::getName).toList(),
+                                               jactlModules.stream().map(Module::getName).collect(Collectors.toList()),
                                                forceBuild);
   }
 
   private List<Module> getJactlModules(Project project, JpsModuleSourceRootType<?> rootType) {
     return Stream.of(ModuleManager.getInstance(project).getModules())
                  .filter(module -> containsJactlResource(module, rootType))
-                 .toList();
+                 .collect(Collectors.toList());
   }
 
   private boolean containsJactlResource(Module module, JpsModuleSourceRootType<?> rootType) {

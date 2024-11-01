@@ -17,6 +17,7 @@
 
 package io.jactl.intellijplugin.jpsplugin.builder;
 
+import io.jactl.Utils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.jps.builders.BuildTargetType;
 import org.jetbrains.jps.incremental.BuilderService;
@@ -29,16 +30,16 @@ public class JactlBuilderService extends BuilderService {
 
   @Override
   public @NotNull List<? extends BuildTargetType<?>> getTargetTypes() {
-    return List.of(io.jactl.intellijplugin.jpsplugin.builder.JactlBuildTarget.PRODUCTION, io.jactl.intellijplugin.jpsplugin.builder.JactlBuildTarget.TESTS);
+    return Utils.listOf(io.jactl.intellijplugin.jpsplugin.builder.JactlBuildTarget.PRODUCTION, io.jactl.intellijplugin.jpsplugin.builder.JactlBuildTarget.TESTS);
   }
 
   @Override
   public @NotNull List<? extends ModuleLevelBuilder> createModuleLevelBuilders() {
-    return List.of(new JactlBuilder());
+    return Utils.listOf(new JactlBuilder());
   }
 
   @Override
   public @NotNull List<? extends TargetBuilder<?, ?>> createBuilders() {
-    return List.of();
+    return Utils.listOf();
   }
 }

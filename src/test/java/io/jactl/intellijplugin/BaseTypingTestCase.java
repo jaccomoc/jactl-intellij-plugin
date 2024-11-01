@@ -4,11 +4,14 @@ import com.intellij.openapi.command.WriteCommandAction;
 import com.intellij.psi.codeStyle.CodeStyleManager;
 import com.intellij.testFramework.EditorTestUtil;
 import com.intellij.testFramework.fixtures.BasePlatformTestCase;
+import io.jactl.Utils;
+import io.jactl.runtime.RuntimeUtils;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
 import static com.intellij.testFramework.EditorTestUtil.BACKSPACE_FAKE_CHAR;
 
@@ -28,7 +31,11 @@ public abstract class BaseTypingTestCase extends BasePlatformTestCase {
   }
 
   protected void performTypingNoSpaces(String text) {
-    _performTyping(text.lines().map(String::trim).collect(Collectors.joining("\n")), true);
+    String stripped = RuntimeUtils.lines(text).stream().map(String::trim).collect(Collectors.joining("\n"));
+    if (text.endsWith("\n")) {
+      stripped += "\n";
+    }
+    _performTyping(stripped, true);
   }
 
   protected void performTyping(String text) {
@@ -40,7 +47,7 @@ public abstract class BaseTypingTestCase extends BasePlatformTestCase {
       char c = text.charAt(i);
       // Assume that brace pairs are automatically generated when typing '{'
       // so make sure that we don't introduce extraneous '}' by skipping them
-      if (smartNewLines && c == '\n' && text.charAt(i + 1) == '}') {
+      if (smartNewLines && c == '\n' && i + 1 < text.length() && text.charAt(i + 1) == '}') {
         i++;   // ensure '}' is skipped
         // Turn newline into move cursor one line down
         myFixture.getEditor().getCaretModel().moveCaretRelatively(0, 1, false, false, false);
@@ -62,7 +69,7 @@ public abstract class BaseTypingTestCase extends BasePlatformTestCase {
 
   protected void reformat() {
     WriteCommandAction.writeCommandAction(getProject()).run(
-      () -> CodeStyleManager.getInstance(getProject()).reformatText(myFixture.getFile(), List.of(myFixture.getFile().getTextRange()))
+      () -> CodeStyleManager.getInstance(getProject()).reformatText(myFixture.getFile(), Utils.listOf(myFixture.getFile().getTextRange()))
     );
   }
 

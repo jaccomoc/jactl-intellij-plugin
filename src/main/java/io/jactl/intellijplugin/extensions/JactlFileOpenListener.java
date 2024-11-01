@@ -22,6 +22,7 @@ import com.intellij.openapi.fileEditor.FileEditorManager;
 import com.intellij.openapi.fileEditor.FileEditorManagerListener;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.util.FileContentUtil;
+import io.jactl.Utils;
 import io.jactl.intellijplugin.JactlUtils;
 import org.jetbrains.annotations.NotNull;
 
@@ -33,7 +34,7 @@ public class JactlFileOpenListener implements FileEditorManagerListener {
     // Reparse if globals have changed since last time file was modified
     VirtualFile globalsFile = JactlUtils.getGlobalsFile(source.getProject());
     if (globalsFile != null && globalsFile.getModificationStamp() >= file.getModificationStamp()) {
-      ApplicationManager.getApplication().invokeLater(() -> FileContentUtil.reparseFiles(source.getProject(), List.of(file), false));
+      ApplicationManager.getApplication().invokeLater(() -> FileContentUtil.reparseFiles(source.getProject(), Utils.listOf(file), false));
     }
   }
 }

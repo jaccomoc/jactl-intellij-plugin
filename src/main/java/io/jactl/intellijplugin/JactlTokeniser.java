@@ -16,6 +16,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
 import java.util.*;
+import java.util.stream.Collectors;
 
 import static io.jactl.TokenType.EOL;
 import static io.jactl.TokenType.WHITESPACE;
@@ -49,7 +50,7 @@ public class JactlTokeniser extends Lexer {
     tokenise(charSequence, startOffset, endOffset);
     nextToken = null;
     List<JactlTokenBuilder.Event> events = jactlBuilder.getEvents();
-    List<Token>                   tokens = events.stream().filter(JactlTokenBuilder.Event::isToken).map(evt -> ((JactlTokenBuilder.TokenEvent) evt).token).toList();
+    List<Token>                   tokens = events.stream().filter(JactlTokenBuilder.Event::isToken).map(evt -> ((JactlTokenBuilder.TokenEvent) evt).token).collect(Collectors.toList());
     for (tokenIter = tokens.listIterator();
          tokenIter.hasNext(); ) {
       advance();

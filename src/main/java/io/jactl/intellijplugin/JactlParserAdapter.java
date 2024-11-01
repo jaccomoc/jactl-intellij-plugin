@@ -25,6 +25,7 @@ import org.jetbrains.annotations.NotNull;
 import java.util.*;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
@@ -54,7 +55,7 @@ public class JactlParserAdapter implements PsiParser {
 
     JactlFile file = (JactlFile)builder.getUserData(FileContextUtil.CONTAINING_FILE_KEY);
 
-    builder.setDebugMode(true);
+    //builder.setDebugMode(true);
 
     JactlTokeniser tokeniser = (JactlTokeniser)((PsiBuilderImpl)builder).getLexer();
     parse(tokeniser, file, builder);
@@ -79,7 +80,7 @@ public class JactlParserAdapter implements PsiParser {
 
       final JactlFile file = jactlFile;
 
-      //List<JactlTokenBuilder.Event> events = tokeniser.getEvents().stream().filter(Predicate.not(JactlTokenBuilder.Event::isDropped)).toList();
+      //List<JactlTokenBuilder.Event> events = tokeniser.getEvents().stream().filter(e -> !e.isDropped()).collect(Collectors.toList());
       List<JactlTokenBuilder.Event> events = tokeniser.getEvents();
       for (int i = 0; i < events.size(); i++) {
         JactlTokenBuilder.Event event = events.get(i);
@@ -99,6 +100,10 @@ public class JactlParserAdapter implements PsiParser {
           // Closure was turned into a block so ignore it
           continue;
         }
+
+//        if (markerEvent.getMarker().type == JactlExprElementType.BINARY_EXPR) {
+//          continue;   // Don't build BinaryExpr tree to keep things flat
+//        }
 
         if (markerEvent.state == JactlTokenBuilder.MarkerEvent.State.START) {
           marker.psiMarker = builder == null ? null : builder.mark();
@@ -164,7 +169,7 @@ public class JactlParserAdapter implements PsiParser {
         }
       }
 
-//      var notDone = events.stream().filter(e -> e.getMarker() != null && e.getMarker().psiMarker != null && !e.getMarker().doneFlagged).toList();
+//      var notDone = events.stream().filter(e -> e.getMarker() != null && e.getMarker().psiMarker != null && !e.getMarker().doneFlagged).collect(Collectors.toList());
 //      if (!notDone.isEmpty()) {
 //        System.out.println("ERROR: not done markers: " + notDone);
 //      }
@@ -512,7 +517,7 @@ public class JactlParserAdapter implements PsiParser {
         if (lastRefresh == null || file.getModificationStamp() > lastRefresh) {
           file.putUserData(LAST_REFRESH, file.getModificationStamp());
           // Get all open files (excluding the globals script) and reparse in case they depend on any globals
-          List<VirtualFile> openFiles = Stream.of(FileEditorManager.getInstance(project).getOpenFiles()).filter(vf -> !vf.equals(file.getVirtualFile())).toList();
+          List<VirtualFile> openFiles = Stream.of(FileEditorManager.getInstance(project).getOpenFiles()).filter(vf -> !vf.equals(file.getVirtualFile())).collect(Collectors.toList());
           ApplicationManager.getApplication().invokeLater(() -> FileContentUtil.reparseFiles(project, openFiles, false));
         }
       }

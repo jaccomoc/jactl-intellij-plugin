@@ -47,6 +47,7 @@ import com.intellij.psi.PsiManager;
 import com.intellij.refactoring.listeners.RefactoringElementAdapter;
 import com.intellij.refactoring.listeners.RefactoringElementListener;
 import com.intellij.util.net.HttpConfigurable;
+import com.intellij.util.xmlb.XmlSerializer;
 import io.jactl.intellijplugin.JactlFile;
 import io.jactl.intellijplugin.JactlUtils;
 import io.jactl.intellijplugin.common.JactlBundle;

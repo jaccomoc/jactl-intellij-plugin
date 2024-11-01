@@ -18,6 +18,7 @@
 package io.jactl.intellijplugin.jpsplugin.builder;
 
 import com.intellij.util.containers.ContainerUtil;
+import io.jactl.Utils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.jetbrains.jps.builders.*;
@@ -51,8 +52,8 @@ public class JactlBuildTarget extends BuildTarget<JactlBuildRootDescriptor> {
 
   @Override
   public @NotNull Collection<BuildTarget<?>> computeDependencies(@NotNull BuildTargetRegistry buildTargetRegistry, @NotNull TargetOutputIndex targetOutputIndex) {
-    return isTests() ? List.of(new JactlBuildTarget(module, PRODUCTION), new JactlBuildTarget(module, TESTS))
-                     : List.of(new JactlBuildTarget(module, PRODUCTION));
+    return isTests() ? Utils.listOf(new JactlBuildTarget(module, PRODUCTION), new JactlBuildTarget(module, TESTS))
+                     : Utils.listOf(new JactlBuildTarget(module, PRODUCTION));
   }
 
   private boolean isTests() {
@@ -85,10 +86,10 @@ public class JactlBuildTarget extends BuildTarget<JactlBuildRootDescriptor> {
     if (instance != null) {
       File outputDirectory = instance.getOutputDirectory(module, isTests());
       if (outputDirectory != null) {
-        return List.of(outputDirectory);
+        return Utils.listOf(outputDirectory);
       }
     }
-    return List.of();
+    return Utils.listOf();
   }
 
   public static final Type PRODUCTION = new Type(false);
