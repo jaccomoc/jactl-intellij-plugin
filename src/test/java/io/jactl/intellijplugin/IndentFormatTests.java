@@ -25,8 +25,9 @@ public class IndentFormatTests extends BaseTypingTestCase {
     assertEquals(9, myFixture.getEditor().getCaretModel().getOffset());
     performTyping("\n");
     verify("def f() {\n    \n}");
+    performTyping("3\n");
     reformat();
-    verify("def f() {\n    \n}");
+    verify("def f() {\n    3\n    \n}");
   }
 
   public void testSimpleFunDeclBraceReformat() {

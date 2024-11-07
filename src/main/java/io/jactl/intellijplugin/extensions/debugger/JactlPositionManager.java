@@ -21,6 +21,7 @@ import com.intellij.debugger.NoDataException;
 import com.intellij.debugger.PositionManager;
 import com.intellij.debugger.SourcePosition;
 import com.intellij.debugger.engine.DebugProcess;
+import com.intellij.debugger.engine.DebugProcessImpl;
 import com.intellij.debugger.impl.DebuggerUtilsAsync;
 import com.intellij.debugger.impl.DebuggerUtilsEx;
 import com.intellij.debugger.requests.ClassPrepareRequestor;
@@ -40,6 +41,7 @@ import io.jactl.intellijplugin.JactlParserAdapter;
 import io.jactl.intellijplugin.JactlUtils;
 import io.jactl.intellijplugin.common.JactlPlugin;
 import io.jactl.intellijplugin.psi.JactlPsiElement;
+import io.jactl.intellijplugin.psi.interfaces.JactlPsiType;
 import io.jactl.runtime.ClassDescriptor;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -49,9 +51,9 @@ import java.util.List;
 
 public class JactlPositionManager implements PositionManager {
 
-  private DebugProcess process;
+  private DebugProcessImpl process;
 
-  public JactlPositionManager(DebugProcess process) {
+  public JactlPositionManager(DebugProcessImpl process) {
     this.process = process;
   }
 
@@ -70,7 +72,6 @@ public class JactlPositionManager implements PositionManager {
       filePath = JactlPlugin.stripSeparatedPrefix(filePath, JactlPlugin.BASE_JACTL_PKG_PATH, File.separator);
       FileType fileType = FileTypeRegistry.getInstance().getFileTypeByFileName(fileName);
       if (fileType instanceof LanguageFileType && ((LanguageFileType) fileType).getLanguage() == JactlLanguage.INSTANCE) {
-        LanguageFileType lfileType = (LanguageFileType) fileType;
         int              lineNum   = DebuggerUtilsEx.getLineNumber(location, true);
         PsiFile          file      = lineNum >= 0 ? JactlUtils.findFile(process.getProject(), filePath) : null;
         if (file != null) {
@@ -100,11 +101,13 @@ public class JactlPositionManager implements PositionManager {
   @Override
   public @NotNull List<Location> locationsOfLine(@NotNull ReferenceType referenceType, @NotNull SourcePosition sourcePosition) throws NoDataException {
     getJactlFile(sourcePosition);         // Verify we have a Jactl file
-    int lineNum = sourcePosition.getLine() + 1;
     try {
-      List<Location> locations = DebuggerUtilsAsync.locationsOfLineSync(referenceType, DebugProcess.JAVA_STRATUM, null, lineNum);
-      if (locations != null && !locations.isEmpty()) {
-        return locations;
+      if (sourcePosition.getFile().getName().equals(referenceType.sourceName())) {
+        int            lineNum   = sourcePosition.getLine() + 1;
+        List<Location> locations = DebuggerUtilsAsync.locationsOfLineSync(referenceType, DebugProcess.JAVA_STRATUM, null, lineNum);
+        if (locations != null && !locations.isEmpty()) {
+          return locations;
+        }
       }
     }
     catch (AbsentInformationException ignore) {}
@@ -141,7 +144,7 @@ public class JactlPositionManager implements PositionManager {
     if (file instanceof JactlFile) {
       PsiElement element = file.findElementAt(sourcePosition.getOffset());
       element = JactlUtils.skipWhitespaceAndComments(element);
-      while (element != null && !(element instanceof JactlPsiElement)) {
+      while (element != null && (element instanceof JactlPsiType || !(element instanceof JactlPsiElement))) {
         element = element.getParent();
       }
       if (element instanceof JactlPsiElement) {

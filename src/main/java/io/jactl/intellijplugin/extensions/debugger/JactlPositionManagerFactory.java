@@ -20,12 +20,13 @@ package io.jactl.intellijplugin.extensions.debugger;
 import com.intellij.debugger.PositionManager;
 import com.intellij.debugger.PositionManagerFactory;
 import com.intellij.debugger.engine.DebugProcess;
+import com.intellij.debugger.engine.DebugProcessImpl;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public class JactlPositionManagerFactory extends PositionManagerFactory {
   @Override
   public @Nullable PositionManager createPositionManager(@NotNull DebugProcess debugProcess) {
-    return new JactlPositionManager(debugProcess);
+    return new JactlPositionManager((DebugProcessImpl)debugProcess);
   }
 }

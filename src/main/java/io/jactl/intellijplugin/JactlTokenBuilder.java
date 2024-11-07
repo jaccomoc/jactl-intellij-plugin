@@ -213,9 +213,11 @@ public class JactlTokenBuilder extends BuilderImpl {
     public void done(JactlType jactlType, Token location) {
       this.type = jactlType.is(JactlType.CLASS,JactlType.INSTANCE) ? JactlTypeElementType.CLASS_TYPE
                                                                    : JactlTypeElementType.BUILT_IN_TYPE;
-      this.astNode = jactlType;
+      // Since types are shared (especially the built-in ones) we create a wrapper
+      // so that we can store some state in the wrapper (via the setUserData())
+      this.astNode = new DelegatingJactlType(jactlType);
       this.offset  = location.getOffset();
-      _done(jactlType);
+      _done(this.astNode);
     }
 
     @Override
