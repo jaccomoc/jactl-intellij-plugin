@@ -1,5 +1,6 @@
 package io.jactl.intellijplugin;
 
+import com.intellij.openapi.actionSystem.IdeActions;
 import com.intellij.openapi.command.WriteCommandAction;
 import com.intellij.psi.codeStyle.CodeStyleManager;
 import com.intellij.testFramework.EditorTestUtil;

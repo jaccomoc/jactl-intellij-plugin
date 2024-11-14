@@ -1,21 +1,13 @@
 <!-- Plugin Configuration File. Read more: https://plugins.jetbrains.com/docs/intellij/plugin-configuration-file.html -->
-<idea-plugin>
-  <!-- Unique identifier of the plugin. It should be FQN. It cannot be changed between the plugin versions. -->
-  <id>io.jactl.intellij-jactl</id>
+<idea-plugin url="https://jactl.io">
+  <id>io.jactl.intellij-jactl-plugin</id>
 
-  <!-- Public plugin name should be written in Title Case.
-       Guidelines: https://plugins.jetbrains.com/docs/marketplace/plugin-overview-page.html#plugin-name -->
   <name>Jactl</name>
 
-  <!-- A displayed Vendor name or Organization ID displayed on the Plugins Page. -->
-  <vendor email="jactllang@gmail.com" url="https://jactl.io">Jactl</vendor>
+  <vendor email="jactl.lang@gmail.com" url="https://jactl.io">Jactl</vendor>
 
-  <!-- Description of the plugin displayed on the Plugin Page and IDE Plugin Manager.
-       Simple HTML elements (text formatting, paragraphs, and lists) can be added inside of <![CDATA[ ]]> tag.
-       Guidelines: https://plugins.jetbrains.com/docs/marketplace/plugin-overview-page.html#plugin-description -->
   <description><![CDATA[
-    Intellij plugin for the <a href="https://jactl.io">Jactl language</a>.<br>
-    <em>Jactl is a powerful, secure scripting language for the JVM platform with syntax based on the best bits of Groovy and Perl.</em>
+    Intellij plugin for the <a href="https://jactl.io">Jactl language</a>, a powerful, secure scripting language for the JVM platform with familiar, but concise, syntax.</em>
     <p>
     The plugin provides the following features:
     <ul>
@@ -35,13 +27,9 @@
     <p><a href="https://jactl.io">Further information</a></p>
   ]]></description>
 
-  <!-- Product and plugin compatibility requirements.
-       Read more: https://plugins.jetbrains.com/docs/intellij/plugin-compatibility.html -->
   <depends>com.intellij.modules.platform</depends>
   <depends>com.intellij.modules.java</depends>
 
-  <!-- Extension points defined by the plugin.
-       Read more: https://plugins.jetbrains.com/docs/intellij/plugin-extension-points.html -->
   <extensions defaultExtensionNs="com.intellij">
     <projectConfigurable groupId="language"
                          bundle="messages.JactlBundle"

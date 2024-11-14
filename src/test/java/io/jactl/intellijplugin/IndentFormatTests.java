@@ -1,6 +1,7 @@
 package io.jactl.intellijplugin;
 
 import com.github.weisj.jsvg.a;
+import com.intellij.openapi.actionSystem.IdeActions;
 import com.intellij.openapi.command.WriteCommandAction;
 import com.intellij.psi.codeStyle.CodeStyleManager;
 import com.intellij.testFramework.EditorTestUtil;
@@ -28,6 +29,17 @@ public class IndentFormatTests extends BaseTypingTestCase {
     performTyping("3\n");
     reformat();
     verify("def f() {\n    3\n    \n}");
+  }
+
+  public void testBlock() {
+    myFixture.configureByText("script.jactl", "");
+    performTyping("{");
+    verify("{}");
+    performTyping("\n");
+    verify("{\n    \n}");
+    performTyping("3\n4\n5");
+    reformat();
+    verify("{\n    3\n    4\n    5\n}");
   }
 
   public void testSimpleFunDeclBraceReformat() {
@@ -479,6 +491,21 @@ public class IndentFormatTests extends BaseTypingTestCase {
     verify(text);
   }
 
+  public void testBinaryExpressions6a() {
+    String text =
+      "xxx = 1 + 2<caret>\n" +
+      "        + 4\n";
+    myFixture.configureByText("script.jactl", text);
+    performTypingNoSpaces("\n+ 3");
+    EditorTestUtil.executeAction(myFixture.getEditor(), IdeActions.ACTION_EDITOR_EMACS_TAB);
+    String expected = "xxx = 1 + 2\n" +
+                      "        + 3\n" +
+                      "        + 4\n";
+    verify(expected);
+    reformat();
+    verify(expected);
+  }
+
   public void testBinaryExpressions7() {
     String text =
       "def x = (a+b) + b\n" +
@@ -509,6 +536,34 @@ public class IndentFormatTests extends BaseTypingTestCase {
     performTypingNoSpaces(text);
     reformat();
     verify(text);
+  }
+
+  public void testChainedCalls2a() {
+    String text =
+      "def xxxxxx = abc.method1()<caret>";
+    myFixture.configureByText("script.jactl", text);
+    performTypingNoSpaces("\n.filter()");
+    EditorTestUtil.executeAction(myFixture.getEditor(), IdeActions.ACTION_EDITOR_EMACS_TAB);
+    String expected =
+      "def xxxxxx = abc.method1()\n" +
+      "                .filter()";
+    reformat();
+    verify(expected);
+  }
+
+  public void testChainedCalls2b() {
+    String text =
+      "def x = abc.method1()<caret>\n" +
+      "           .filter()\n";
+    myFixture.configureByText("script.jactl", text);
+    performTypingNoSpaces("\n.map()");
+    EditorTestUtil.executeAction(myFixture.getEditor(), IdeActions.ACTION_EDITOR_EMACS_TAB);
+    String expected =
+      "def x = abc.method1()\n" +
+      "           .map()\n" +
+      "           .filter()\n";
+    reformat();
+    verify(expected);
   }
 
   public void testChainedCalls3() {

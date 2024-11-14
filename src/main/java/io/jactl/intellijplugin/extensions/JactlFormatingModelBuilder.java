@@ -24,18 +24,19 @@ import com.intellij.psi.TokenType;
 import com.intellij.psi.codeStyle.CodeStyleSettings;
 import com.intellij.psi.formatter.common.AbstractBlock;
 import com.intellij.psi.tree.IElementType;
-import com.intellij.ui.dsl.builder.Align;
 import io.jactl.intellijplugin.JactlLanguage;
 import io.jactl.intellijplugin.JactlParserDefinition;
 import io.jactl.intellijplugin.JactlUtils;
 import io.jactl.intellijplugin.psi.*;
 import io.jactl.intellijplugin.psi.interfaces.JactlPsiList;
-import it.unimi.dsi.fastutil.doubles.A;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 import java.util.function.Function;
+import java.util.function.Predicate;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static io.jactl.intellijplugin.psi.JactlExprElementType.TERNARY_EXPR;
 import static io.jactl.intellijplugin.psi.JactlTokenTypes.*;
@@ -67,13 +68,25 @@ public class JactlFormatingModelBuilder implements FormattingModelBuilder {
   }
 
   private List<JactlAbstractBlock> buildChildren(JactlAbstractBlock parentBlock, ASTNode parentNode, SpacingBuilder spacingBuilder) {
-    List<JactlAbstractBlock> blocks = new ArrayList<>();
-    Alignment alignment   = null;
+    Alignment                alignment = null;
     if (isList(parentNode) || isRhsExpr(parentNode)) {
       // Create alignment for args or for init/cond/update part of "for" stmt or for rhs of assignment
       alignment = Alignment.createAlignment();
     }
+    return _buildChildren(parentBlock, parentNode, spacingBuilder, alignment);
+  }
+
+  private List<JactlAbstractBlock> _buildChildren(JactlAbstractBlock parentBlock, ASTNode parentNode, SpacingBuilder spacingBuilder, Alignment alignment) {
+    List<JactlAbstractBlock> blocks    = new ArrayList<>();
     for (ASTNode child  = parentNode.getFirstChildNode(); child != null; child = child.getTreeNext()) {
+      // If we are a method call then subsume binary expr children into ours to make alignement
+      // work better with auto-indent and aligning on '.' of method calls. This is due to how
+      // auto-indent looks for candidate alignments. Only if text range of element overlaps with
+      // place of indent will it then drill down into children to look for alignments.
+      if (JactlUtils.isElementType(parentNode, JactlExprElementType.METHOD_CALL_EXPR) && JactlUtils.isElementType(child, JactlExprElementType.BINARY_EXPR)) {
+        blocks.addAll(_buildChildren(parentBlock, child, spacingBuilder, alignment));
+        continue;
+      }
       JactlAbstractBlock block = createBlock(parentBlock, parentNode, spacingBuilder, child, alignment == null ? parentBlock.getAlignment(child) : alignment);
       if (block != null) {
         blocks.add(block);
@@ -100,7 +113,7 @@ public class JactlFormatingModelBuilder implements FormattingModelBuilder {
     else if (child.getElementType() instanceof JactlStmtElementType || isList(child) || child.getElementType() == JactlNameElementType.PACKAGE) {
       return new JactlStmtBlock(parentBlock, child, node.getElementType() == JactlParserDefinition.FILE, spacingBuilder, alignment);
     }
-    else if (isBinaryExpr(child)) {
+    else if (isBinaryOrMethodCallExpr(child)) {
       return new JactlBinaryExpr(parentBlock, child, spacingBuilder, alignment);
     }
     else if (JactlUtils.isElementType(child, TERNARY_EXPR)) {
@@ -159,7 +172,7 @@ public class JactlFormatingModelBuilder implements FormattingModelBuilder {
       else if (newChildIndex == 0) {
         alignment = getAlignment();    // If parent is aligned then first child should be aligned
       }
-      return new ChildAttributes(isTopLevel ? Indent.getNoneIndent() : Indent.getNormalIndent(), alignment);
+      return new ChildAttributes(isTopLevel && !(this instanceof JactlStmtBlock) ? Indent.getNoneIndent() : Indent.getNormalIndent(), alignment);
     }
 
     public Alignment getAlignment(ASTNode node) {
@@ -181,8 +194,14 @@ public class JactlFormatingModelBuilder implements FormattingModelBuilder {
     JactlBinaryExpr(JactlAbstractBlock parentBlock, ASTNode node, SpacingBuilder spacingBuilder, Alignment alignment) {
       super(parentBlock, node, spacingBuilder, alignment);
       Pos pos = Pos.LEFT;
+      // If we are a method call then include our binary expr children as ours so we pretend
+      // that we are the binary expr
+      boolean isMethodCall = JactlUtils.isElementType(node, JactlExprElementType.METHOD_CALL_EXPR);
+      Predicate<ASTNode> flattenChildren = child -> isMethodCall && JactlUtils.isElementType(child, JactlExprElementType.BINARY_EXPR);
       Alignment parentOpAlign = parentBlock.getOperatorAlignment();
-      for (ASTNode child: getNode().getChildren(null)) {
+      for (ASTNode child: Arrays.stream(getNode().getChildren(null))
+                                .flatMap(child ->  flattenChildren.test(child) ? Arrays.stream(child.getChildren(null)) : Stream.of(child))
+                                .collect(Collectors.toList())) {
         IElementType elementType = child.getElementType();
         if (pos == Pos.LEFT && elementType instanceof JactlTokenType && ((JactlTokenType)elementType).isOperator()) {
           // Once we get to the operator we need to check on newlines positions to decide how to align
@@ -209,16 +228,17 @@ public class JactlFormatingModelBuilder implements FormattingModelBuilder {
       }
       Pos pos = childrenPos.get(child);
       if (pos == null) {
-        throw new IllegalStateException("getAlignment -> node " + child + " is not in list of children: " + Arrays.toString(getNode().getChildren(null)));
+        pos = Pos.RIGHT;
       }
       return pos == Pos.LEFT ? getAlignment() : operatorAlignment;
     }
   }
 
-  private static boolean isBinaryExpr(ASTNode child) {
+  private static boolean isBinaryOrMethodCallExpr(ASTNode child) {
     // Need to ignore bracketed BinaryExpr since they are just "(" BinaryExpr ")" and have no operator to align on
     return JactlUtils.isElementType(child, JactlExprElementType.BINARY_EXPR) &&
-           !JactlUtils.isElementType(JactlUtils.getFirstChildNotWhiteSpace(child.getPsi()), LEFT_PAREN);
+           !JactlUtils.isElementType(JactlUtils.getFirstChildNotWhiteSpace(child.getPsi()), LEFT_PAREN) ||
+           JactlUtils.isElementType(child, JactlExprElementType.METHOD_CALL_EXPR);
   }
 
   class JactlTernaryExpr extends JactlBlock {

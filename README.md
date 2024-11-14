@@ -21,16 +21,16 @@ The following features are provided by the plugin:
 
 ## Installation
 
-Within Intellij, navigate to **IntelliJ DEA | Settings... | Plugins | Marketplace**, search
-for "Jactl", and install the plugin.
+Within Intellij, navigate to **Settings... -> Plugins -> Marketplace**, search
+for _Jactl_, and install the plugin.
 
 ## Configuration
 
-Make sure that under **File | Project Structure... | Project Settings | Modules** you configure the directory where your
+Make sure that under **File -> Project Structure... -> Project Settings -> Modules** you configure the directory where your
 Jactl scripts and class files will be located in your project (e.g. src/main/jactl).
 
 You will need to also add the Jactl library to your project.
-Under **File | Project Structure... | Project Settings | Libraries** add a new library and select **Java** from the
+Under **File -> Project Structure... -> Project Settings -> Libraries** add a new library and select **Java** from the
 drop-down list if you want to use a Jactl JAR you already have downloaded locally, or select **Maven** to download
 a version from Maven.
 If you are downloading from Maven, enter the Maven name for the version of the Jactl library.
@@ -53,7 +53,7 @@ It is use used during building so that references to unknown global variables do
 and is used during run/debug to get the actual values to pass into the script.
 
 The plugin allows you to configure a default globals script file under
-**IntelliJ IDEA | Settings... | Languages & Frameworks | Jactl**.
+**Settings... -> Languages & Frameworks -> Jactl**.
 Select the file that will be used to define the global variables.
 
 The globals script file is a Jactl script itself that should return a map of names with values.
@@ -72,7 +72,7 @@ Here is an example globals variable script:
     requestId: 123456789,
     merchant: [
       merchantId: 99999999,
-      name: 'Fredson & Sons',
+      name: 'Frederick & Sons',
       address: [ street:'123 Main St', city:'Mainsville', state:'Mainstate', country:'Country' ]
     ],
     biller: [

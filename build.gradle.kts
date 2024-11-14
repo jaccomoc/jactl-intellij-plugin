@@ -47,7 +47,22 @@ dependencies {
     testRuntimeOnly("junit:junit:4.13")
 }
 
-//intellijPlatform {
+intellijPlatform {
+    pluginConfiguration {
+        id = "io.jactl.intellij-jactl-plugin"
+        name="Jactl"
+        version="1.0.0"
+        ideaVersion {
+            sinceBuild = "241"
+            untilBuild = provider { null }
+        }
+        vendor {
+            name  = "Jactl"
+            email = "jactl.lang@gmail.com"
+            url   = "https://jactl.io"
+        }
+
+    }
 //    pluginVerification {
 //        ides {
 //            ide(IntelliJPlatformType.IntellijIdeaCommunity, "2024.1.4")
@@ -57,9 +72,9 @@ dependencies {
 //                types = listOf(IntelliJPlatformType.IntellijIdeaCommunity)
 //                channels = listOf(ProductRelease.Channel.RELEASE)
 //                sinceBuild = "241"
-//                //untilBuild = "242.*"
+//                untilBuild = "242.*"
 //            }
 //        }
 //    }
-//}
+}
 
