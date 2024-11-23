@@ -28,7 +28,7 @@ public abstract class BaseTypingTestCase extends BasePlatformTestCase {
 
   protected void setUp() throws Exception {
     super.setUp();
-    System.out.println(getTestName(true));
+    //System.out.println(getTestName(true));
   }
 
   protected void performTypingNoSpaces(String text) {

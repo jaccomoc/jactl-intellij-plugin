@@ -38,6 +38,7 @@ import io.jactl.intellijplugin.jpsplugin.builder.GlobalsException;
 import io.jactl.intellijplugin.psi.*;
 import io.jactl.intellijplugin.psi.impl.JactlPsiTypeImpl;
 import io.jactl.intellijplugin.psi.interfaces.JactlPsiName;
+import io.jactl.intellijplugin.psi.interfaces.JactlPsiType;
 import io.jactl.runtime.ClassDescriptor;
 import io.jactl.runtime.RuntimeUtils;
 import org.jetbrains.annotations.NotNull;
@@ -55,6 +56,7 @@ import java.util.stream.Stream;
 import static com.intellij.psi.TokenType.WHITE_SPACE;
 
 public class JactlUtils {
+  public static final String CODE_FRAGMENT_FILE_NAME = "_$j__fragment__.jactl";
   private static final Logger LOG = Logger.getInstance(JactlUtils.class);
 
   public static final String[] BUILTIN_TYPES = Parser.typesAndVar.stream().map(tok -> tok.asString).toArray(String[]::new);
@@ -349,10 +351,20 @@ public class JactlUtils {
    */
   public static PsiElement getPrevSibling(PsiElement element) {
     for (PsiElement prev = element.getPrevSibling(); prev != null; prev = prev.getPrevSibling()) {
-      if (isElementType(prev.getNode(), JactlTokenTypes.COMMA, JactlTokenTypes.WHITESPACE, WHITE_SPACE, JactlTokenTypes.COMMENT)) {
+      if (isElementType(prev.getNode(), JactlTokenTypes.WHITESPACE, WHITE_SPACE, JactlTokenTypes.COMMENT)) {
         continue;
       }
       return prev;
+    }
+    return null;
+  }
+
+  public static PsiElement getNextSibling(PsiElement element) {
+    for (PsiElement next = element.getNextSibling(); next != null; next = next.getNextSibling()) {
+      if (isElementType(next.getNode(), JactlTokenTypes.WHITESPACE, WHITE_SPACE, JactlTokenTypes.COMMENT)) {
+        continue;
+      }
+      return next;
     }
     return null;
   }
@@ -399,7 +411,6 @@ public class JactlUtils {
   @NotNull
   public static String elementText(@NotNull String name, JactlNameElementType type) {
     switch (JactlNameElementType.getNameType(type)) {
-      case FILE:      throw new IncorrectOperationException("Invalid operation");
       case PACKAGE:   throw new IncorrectOperationException("Package rename not supported");
       case CLASS:     return "class " + name + "{}";
       case FUNCTION:  return "def " + name + "(){}";
@@ -452,6 +463,9 @@ public class JactlUtils {
   }
 
   public static boolean isGlobalsFile(JactlFile file) {
+    if (file == null) {
+      return false;
+    }
     String globalsScriptName = JactlConfiguration.getInstance(file.getProject()).getGlobalVariablesScript();
     if (globalsScriptName != null && !globalsScriptName.trim().isEmpty()) {
       String canonicalPath = file.getVirtualFile().getCanonicalPath();
@@ -748,6 +762,9 @@ public class JactlUtils {
   }
 
   public static String packageNameFor(JactlFile file) {
+    if (file == null) {
+      return null;
+    }
     if (file.getVirtualFile().getCanonicalPath().equals(JactlPlugin.DUMMY_FILE_PATH)) {
       return "";
     }
@@ -853,4 +870,18 @@ public class JactlUtils {
     return globals;
   }
 
+  /**
+   * Look for most immediate parent that is a JactlPsiElement (and not a JactlPsiType
+   * because JactlPsiType does not have a block that we can get)
+   * @param element the element
+   * @return the parent or null if none can be found
+   */
+  public static JactlPsiElement getJactlPsiParent(PsiElement element) {
+    for (PsiElement parent = element; parent != null; parent = parent.getParent()) {
+      if (parent instanceof JactlPsiElement && !(parent instanceof JactlPsiType)) {
+        return (JactlPsiElement)parent;
+      }
+    }
+    return null;
+  }
 }

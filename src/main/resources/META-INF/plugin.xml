@@ -63,6 +63,10 @@
     <debuggerClassFilterProvider       implementation="io.jactl.intellijplugin.extensions.debugger.JactlDebuggerClassFilterProvider" />
   </extensions>
 
+  <extensions defaultExtensionNs="com.intellij.debugger">
+    <codeFragmentFactory implementation="io.jactl.intellijplugin.extensions.debugger.JactlCodeFragmentFactory" />
+  </extensions>
+
   <projectListeners>
     <listener class="io.jactl.intellijplugin.extensions.JactlFileOpenListener" topic="com.intellij.openapi.fileEditor.FileEditorManagerListener" />
   </projectListeners>

@@ -20,7 +20,7 @@ public class RenameMoveTests extends BasePlatformTestCase {
 
   protected void setUp() throws Exception {
     super.setUp();
-    System.out.println(getTestName(true));
+    //System.out.println(getTestName(true));
     String testData = "";
     myFixture.copyDirectoryToProject("completionTests", testData);
   }

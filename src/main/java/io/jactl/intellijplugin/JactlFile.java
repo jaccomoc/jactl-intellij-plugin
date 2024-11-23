@@ -4,6 +4,7 @@ import com.intellij.extapi.psi.PsiFileBase;
 import com.intellij.openapi.fileTypes.FileType;
 import com.intellij.psi.FileViewProvider;
 import com.intellij.psi.PsiElement;
+import com.intellij.psi.tree.IFileElementType;
 import com.intellij.util.IncorrectOperationException;
 import io.jactl.JactlUserDataHolder;
 import io.jactl.Stmt;
@@ -15,6 +16,7 @@ import io.jactl.intellijplugin.psi.impl.JactlPsiNameImpl;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
+import java.util.Map;
 
 public class JactlFile extends PsiFileBase implements JactlPsiElement {
 
@@ -46,6 +48,8 @@ public class JactlFile extends PsiFileBase implements JactlPsiElement {
   public @NotNull FileType getFileType() {
     return JactlFileType.INSTANCE;
   }
+
+
 
   @Override
   public String toString() {
@@ -114,5 +118,9 @@ public class JactlFile extends PsiFileBase implements JactlPsiElement {
       return !name.getText().equals(getFileNameNoSuffix());
     }
     return true;
+  }
+
+  public Map<String,Object> getGlobals() {
+    return JactlUtils.getGlobals(getProject());
   }
 }

@@ -28,10 +28,7 @@ import com.intellij.psi.tree.IElementType;
 import com.intellij.psi.tree.IFileElementType;
 import com.intellij.util.ProcessingContext;
 import io.jactl.*;
-import io.jactl.intellijplugin.JactlAstKey;
-import io.jactl.intellijplugin.JactlFile;
-import io.jactl.intellijplugin.JactlParserAdapter;
-import io.jactl.intellijplugin.JactlUtils;
+import io.jactl.intellijplugin.*;
 import io.jactl.intellijplugin.common.JactlPlugin;
 import io.jactl.intellijplugin.psi.*;
 import io.jactl.intellijplugin.psi.impl.JactlPsiIdentifierExprImpl;
@@ -46,6 +43,7 @@ import org.jetbrains.annotations.NotNull;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
@@ -63,12 +61,14 @@ public class JactlCompletionContributor extends CompletionContributor {
                                                        .map(LookupElementBuilder::create)
                                                        .collect(Collectors.toList());
 
+  List<LookupElementBuilder> globalFunctionNames;
+
   public JactlCompletionContributor() {
-    List<LookupElementBuilder> globalFunctionNames = Functions.getGlobalFunctionNames()
-                                                              .stream()
-                                                              .map(Functions::getGlobalFunDecl)
-                                                              .map(JactlCompletionContributor::createFunctionLookup)
-                                                              .collect(Collectors.toList());
+    globalFunctionNames = Functions.getGlobalFunctionNames()
+                                   .stream()
+                                   .map(Functions::getGlobalFunDecl)
+                                   .map(JactlCompletionContributor::createFunctionLookup)
+                                   .collect(Collectors.toList());
 
     // We have an identifier in an expression not immediately after a '.' or '?.'
     // Add all visible variables/fields, functions/methods, global functions, and any class static functions we can find.
@@ -81,87 +81,7 @@ public class JactlCompletionContributor extends CompletionContributor {
            new CompletionProvider<CompletionParameters>() {
              @Override
              protected void addCompletions(@NotNull CompletionParameters parameters, @NotNull ProcessingContext context, @NotNull CompletionResultSet result) {
-               JactlPsiElement element          = (JactlPsiElement) parameters.getPosition();
-               JactlPsiElement parent           = (JactlPsiElement) element.getParent();
-               JactlPsiElement       grandParent      = (JactlPsiElement) parent.getParent();
-               List<ClassDescriptor> classDescriptors = JactlParserAdapter.getClasses(parent.getFile(), parent.getSourceCode(), grandParent.getAstKey());
-               ClassDescriptor       owningClass      = JactlParserAdapter.getClass(parent.getFile(), parent.getSourceCode(), parent.getAstKey());
-               List<ClassDescriptor> baseClasses = owningClass == null ? Utils.listOf()
-                                                                       : Stream.concat(Stream.of(owningClass), JactlUtils.stream(owningClass, ClassDescriptor::getBaseClass)).collect(Collectors.toList());
-               Runnable addTypes = () -> {
-                 result.addAllElements(builtinTypeLookups);
-                 result.addAllElements(classDescriptors.stream().map(JactlCompletionContributor::createLookup).collect(Collectors.toList()));
-               };
-
-               // If we are only identifier in expr then we need to add built-in types and any visible
-               // top level classes as user might be about to define a variable/function.
-               PsiElement firstChild = JactlUtils.getFirstChild(grandParent, JactlExprElementType.IDENTIFIER);
-               if (JactlUtils.isElementType(grandParent, JactlStmtElementType.EXPR_STMT, JactlStmtElementType.VAR_DECL) &&
-                   firstChild == parent &&
-                   JactlUtils.getNextSibling(parent, JactlTokenTypes.IDENTIFIER) == null) {
-                 addTypes.run();
-                 PsiElement classDecl        = JactlUtils.getAncestor(grandParent, JactlStmtElementType.CLASS_DECL);
-                 PsiElement greatGrandParent = grandParent.getParent();
-                 if (classDecl != null && greatGrandParent.getParent() == classDecl) {
-                   // We are at field/method level of a class declaration so add "static" and "const" and
-                   // "class" and then return as there are no other completions available
-                   result.addElement(LookupElementBuilder.create(TokenType.STATIC.asString));
-                   result.addElement(LookupElementBuilder.create(TokenType.CONST.asString));
-                   result.addElement(LookupElementBuilder.create(TokenType.CLASS.asString));
-                   return;
-                 }
-                 else if (JactlUtils.isElementType(grandParent, JactlStmtElementType.EXPR_STMT) &&
-                          JactlUtils.getFirstChildNotWhiteSpace(grandParent) == parent) {
-                   // If we are inside a statement block (not a class declaration) and we are at the start of the EXPR_STMT
-                   // then also add statement-beginning keywords since we are at the start of a statement.
-                   result.addAllElements(beginningKeywords);
-                   // If top level of script add "class" to completion list
-                   IElementType type = greatGrandParent.getNode().getElementType();
-                   if (type == JactlNameElementType.JACTL_FILE || type instanceof IFileElementType) {
-                     result.addElement(LookupElementBuilder.create(TokenType.CLASS.asString));
-                     // If first element in script then allow 'package' in completions
-                     PsiElement prevSibling = JactlUtils.getPrevSibling(grandParent);
-                     if (prevSibling == null) {
-                       result.addElement(LookupElementBuilder.create(TokenType.PACKAGE.asString));
-                     }
-                     // If prev was package or we are first then also allow 'import'
-                     if (prevSibling == null || JactlUtils.isElementType(prevSibling, JactlNameElementType.PACKAGE, JactlStmtElementType.IMPORT_STMT)) {
-                       result.addElement(LookupElementBuilder.create(TokenType.IMPORT.asString));
-                     }
-                   }
-                 }
-               }
-               else if (JactlUtils.isElementType(parent, JactlExprElementType.IDENTIFIER) &&
-                        JactlUtils.isElementType(JactlUtils.getPrevSibling(parent), JactlTokenTypes.LEFT_PAREN)) {
-                 // Immediately after '(' so add types since this might be a cast
-                 addTypes.run();
-               }
-
-               // Add global functions
-               result.addAllElements(globalFunctionNames);
-
-               // Add variables and functions visible
-               result.addAllElements(JactlParserAdapter.getVariablesAndFunctions(parent.getFile(), parent.getSourceCode(), parent.getAstKey())
-                                                       .stream()
-                                                       .map(JactlCompletionContributor::createLookup)
-                                                       .collect(Collectors.toList()));
-
-               // Add class static methods for other classes (not our class or one of our base classes)
-               result.addAllElements(classDescriptors.stream()
-                                                     .filter(c -> baseClasses.stream().noneMatch(baseClass -> c.getPackagedName().equals(baseClass.getPackagedName())))
-                                                     .flatMap(descriptor -> descriptor.getAllMethods()
-                                                                                      .filter(entry -> entry.getValue().isStatic)
-                                                                                      .map(entry -> createStaticFunctionLookup(descriptor, entry.getValue())))
-                                                     .collect(Collectors.toList()));
-
-               // Add any global variables if we are in a script
-               JactlFile file = element.getFile();
-               if (file.isScriptFile()) {
-                 Map<String, Object> globals = JactlUtils.getGlobals(element.getProject());
-                 if (globals != null) {
-                   globals.keySet().forEach(key -> result.addElement(LookupElementBuilder.create(key)));
-                 }
-               }
+               handleIdentifierExpr((JactlPsiElement) parameters.getPosition(), result);
              }
            });
 
@@ -186,14 +106,34 @@ public class JactlCompletionContributor extends CompletionContributor {
              }
            });
 
+    BiConsumer<PsiElement,CompletionResultSet> innerClasses = (element, result) -> {
+      PsiElement parent       = element.getParent();
+      JactlPsiElement prev    = (JactlPsiElement)JactlUtils.getPrevSibling(JactlUtils.getPrevSibling(parent));
+      Expr expr = (Expr)prev.getJactlAstNode();
+      ClassDescriptor descriptor = expr.type.getClassDescriptor();
+      result.addAllElements(descriptor.getInnerClasses().stream().map(JactlCompletionContributor::createLookup).collect(Collectors.toList()));
+    };
+
     // Class type without class path (no package prefix)
     extend(CompletionType.BASIC, PlatformPatterns.psiElement(JactlTokenTypes.IDENTIFIER)
-                                                 .andNot(PlatformPatterns.psiElement().withParent(PlatformPatterns.psiElement(JactlExprElementType.CLASS_PATH_EXPR)))
-                                                 .withAncestor(2, PlatformPatterns.psiElement(JactlTypeElementType.CLASS_TYPE)),
+                                                 .withAncestor(2, PlatformPatterns.psiElement(JactlTypeElementType.CLASS_TYPE)
+                                                                                  .andNot(PlatformPatterns.psiElement().withFirstChild(PlatformPatterns.psiElement(JactlExprElementType.CLASS_PATH_EXPR)))),
            new CompletionProvider<CompletionParameters>() {
              @Override
              protected void addCompletions(@NotNull CompletionParameters parameters, @NotNull ProcessingContext context, @NotNull CompletionResultSet result) {
-               JactlPsiElement element = (JactlPsiElement) parameters.getPosition();
+               JactlPsiElement element     = (JactlPsiElement)parameters.getPosition();
+               JactlPsiElement parent      = (JactlPsiElement)element.getParent();
+               PsiElement      prevSibling = JactlUtils.getPrevSibling(parent);
+               if (JactlUtils.isElementType(prevSibling, JactlTokenTypes.DOT)) {
+                 // We are of form X.Y.<caret> so just return inner classes
+                 innerClasses.accept(element, result);
+                 return;
+               }
+               PsiElement nextSibling = JactlUtils.getNextSibling(parent);
+               if (nextSibling == null && prevSibling == null && JactlUtils.isElementType(parent.getParent().getParent(), JactlStmtElementType.BLOCK, JactlParserDefinition.JACTL_FILE_ELEMENT_TYPE)) {
+                 // Probably a completion before a var decl or other statement so complete as though we have a normal Expr.Identifier
+                 handleIdentifierExpr(element, result);
+               }
                // If we know we are a class type then complete with known classes. Make sure to exclude current class
                // if we happen to be in an "extends".
                PsiElement classType       = JactlUtils.getAncestor(element, JactlTypeElementType.CLASS_TYPE);
@@ -201,6 +141,18 @@ public class JactlCompletionContributor extends CompletionContributor {
                boolean    isExtends       = JactlUtils.isElementType(prevToClassType, JactlTokenTypes.EXTENDS);
                String className = isExtends ? JactlUtils.getPrevSibling(prevToClassType).getText() : "";
                addBuiltinsAndClasses(result, element, JactlTypeElementType.CLASS_TYPE, !isExtends, className);
+             }
+           });
+
+    // new a.b.c.X.<caret> --> complete with inner classes
+    extend(CompletionType.BASIC, PlatformPatterns.psiElement(JactlTokenTypes.IDENTIFIER)
+                                                 .withAncestor(2, PlatformPatterns.psiElement(JactlTypeElementType.CLASS_TYPE)
+                                                                                  .withFirstChild(PlatformPatterns.psiElement(JactlExprElementType.CLASS_PATH_EXPR)))
+                                                 .withParent(PlatformPatterns.psiElement(JactlExprElementType.IDENTIFIER)),
+           new CompletionProvider<CompletionParameters>() {
+             @Override
+             protected void addCompletions(@NotNull CompletionParameters parameters, @NotNull ProcessingContext context, @NotNull CompletionResultSet result) {
+               innerClasses.accept(parameters.getPosition(), result);
              }
            });
 
@@ -224,7 +176,7 @@ public class JactlCompletionContributor extends CompletionContributor {
                JactlPsiElement element = (JactlPsiElement)parameters.getPosition();
                // Build package path for preceding nodes
                StringBuilder pathBuilder = new StringBuilder();
-               for (PsiElement child = element.getParent().getFirstChild(); child != element; child = child.getNextSibling()) {
+               for (PsiElement child = JactlUtils.skipWhitespaceAndComments(element.getParent().getFirstChild()); child != element; child = JactlUtils.getNextSibling(child)) {
                  pathBuilder.append(child.getText());
                }
                String path = JactlPlugin.removeSuffix(pathBuilder.toString());
@@ -343,7 +295,7 @@ public class JactlCompletionContributor extends CompletionContributor {
                JactlPsiElement importStmt = (JactlPsiElement)element.getParent().getParent();
                // Build package path for preceding nodes
                List<String> path = new ArrayList<>();
-               for (PsiElement child = JactlUtils.getFirstChild(importStmt, JactlPsiIdentifierExprImpl.class); child != element.getParent(); child = child.getNextSibling()) {
+               for (PsiElement child = JactlUtils.getFirstChild(importStmt, JactlPsiIdentifierExprImpl.class); child != element.getParent(); child = JactlUtils.getNextSibling(child)) {
                  if (child instanceof JactlPsiIdentifierExprImpl) {
                    path.add(child.getText());
                  }
@@ -414,14 +366,100 @@ public class JactlCompletionContributor extends CompletionContributor {
 
   }
 
+  private void handleIdentifierExpr(JactlPsiElement element, @NotNull CompletionResultSet result) {
+    JactlPsiElement       parent           = (JactlPsiElement) element.getParent();
+    JactlPsiElement       grandParent      = (JactlPsiElement) parent.getParent();
+    List<ClassDescriptor> classDescriptors = JactlParserAdapter.getClasses(grandParent);
+    ClassDescriptor       owningClass      = JactlParserAdapter.getClass(parent);
+    List<ClassDescriptor> baseClasses = owningClass == null ? Utils.listOf()
+                                                            : Stream.concat(Stream.of(owningClass), JactlUtils.stream(owningClass, ClassDescriptor::getBaseClass)).collect(Collectors.toList());
+    Runnable addTypes = () -> {
+      result.addAllElements(builtinTypeLookups);
+      result.addAllElements(classDescriptors.stream().map(JactlCompletionContributor::createLookup).collect(Collectors.toList()));
+    };
+
+    // If we are only identifier in expr then we need to add built-in types and any visible
+    // top level classes as user might be about to define a variable/function.
+    PsiElement firstChild = JactlUtils.getFirstChild(grandParent, JactlExprElementType.IDENTIFIER);
+    if (JactlUtils.isElementType(grandParent, JactlStmtElementType.EXPR_STMT, JactlStmtElementType.VAR_DECL, JactlTypeElementType.CLASS_TYPE) &&
+        firstChild == parent &&
+        JactlUtils.getNextSibling(parent, JactlTokenTypes.IDENTIFIER) == null) {
+      addTypes.run();
+      PsiElement classDecl        = JactlUtils.getAncestor(grandParent, JactlStmtElementType.CLASS_DECL);
+      PsiElement greatGrandParent = grandParent.getParent();
+      if (classDecl != null && greatGrandParent.getParent() == classDecl) {
+        // We are at field/method level of a class declaration so add "static" and "const" and
+        // "class" and then return as there are no other completions available
+        result.addElement(LookupElementBuilder.create(TokenType.STATIC.asString));
+        result.addElement(LookupElementBuilder.create(TokenType.CONST.asString));
+        result.addElement(LookupElementBuilder.create(TokenType.CLASS.asString));
+        return;
+      }
+      else if (JactlUtils.isElementType(grandParent, JactlStmtElementType.EXPR_STMT, JactlTypeElementType.CLASS_TYPE) &&
+               JactlUtils.getFirstChildNotWhiteSpace(grandParent) == parent) {
+        // If we are inside a statement block (not a class declaration) and we are at the start of the EXPR_STMT
+        // then also add statement-beginning keywords since we are at the start of a statement.
+        result.addAllElements(beginningKeywords);
+        // If top level of script add "class" to completion list
+        IElementType type = greatGrandParent.getNode().getElementType();
+        if (type == JactlNameElementType.JACTL_FILE || type instanceof IFileElementType) {
+          result.addElement(LookupElementBuilder.create(TokenType.CLASS.asString));
+          // If first element in script then allow 'package' in completions
+          PsiElement prevSibling = JactlUtils.getPrevSibling(grandParent);
+          if (prevSibling == null) {
+            result.addElement(LookupElementBuilder.create(TokenType.PACKAGE.asString));
+          }
+          // If prev was package or we are first then also allow 'import'
+          if (prevSibling == null || JactlUtils.isElementType(prevSibling, JactlNameElementType.PACKAGE, JactlStmtElementType.IMPORT_STMT)) {
+            result.addElement(LookupElementBuilder.create(TokenType.IMPORT.asString));
+          }
+        }
+      }
+    }
+    else if (JactlUtils.isElementType(parent, JactlExprElementType.IDENTIFIER) &&
+             JactlUtils.isElementType(JactlUtils.getPrevSibling(parent), JactlTokenTypes.LEFT_PAREN)) {
+      // Immediately after '(' so add types since this might be a cast
+      addTypes.run();
+    }
+
+    // Add global functions
+    result.addAllElements(globalFunctionNames);
+
+    // Add variables and functions visible
+    if (JactlUtils.isElementType(grandParent, JactlTypeElementType.CLASS_TYPE)) {
+      // We may not have actually resolved the CLASS_TYPE if there was an error but we still need to get
+      // to local vars and functions so use parent of the CLASS_TYPE
+      parent = (JactlPsiElement)grandParent.getParent();
+    }
+    result.addAllElements(JactlParserAdapter.getVariablesAndFunctions(parent, element)
+                                            .stream()
+                                            .map(JactlCompletionContributor::createLookup)
+                                            .collect(Collectors.toList()));
+
+    // Add class static methods for other classes (not our class or one of our base classes)
+    result.addAllElements(classDescriptors.stream()
+                                          .filter(c -> baseClasses.stream().noneMatch(baseClass -> c.getPackagedName().equals(baseClass.getPackagedName())))
+                                          .flatMap(descriptor -> descriptor.getAllMethods()
+                                                                           .filter(entry -> entry.getValue().isStatic)
+                                                                           .map(entry -> createStaticFunctionLookup(descriptor, entry.getValue())))
+                                          .collect(Collectors.toList()));
+
+    // Add any global variables if we are in a script
+    JactlFile file = element.getFile();
+    if (file.isScriptFile()) {
+      Map<String, Object> globals = JactlUtils.getGlobals(element.getProject());
+      if (globals != null) {
+        globals.keySet().forEach(key -> result.addElement(LookupElementBuilder.create(key)));
+      }
+    }
+  }
+
   private void addBuiltinsAndClasses(CompletionResultSet result, JactlPsiElement element, IElementType parentType, boolean includeBuiltins, String excludeName) {
     if (includeBuiltins) {
       result.addAllElements(builtinTypeLookups);
     }
-    JactlFile   file       = element.getFile();
-    JactlAstKey astKey     = ((JactlPsiElement) JactlUtils.getAncestor(element, parentType)).getAstKey();
-    String      sourceCode = element.getSourceCode();
-    result.addAllElements(JactlParserAdapter.getClasses(file, sourceCode, astKey)
+    JactlPsiElement ancestor   = (JactlPsiElement) JactlUtils.getAncestor(element, parentType);
+    result.addAllElements(JactlParserAdapter.getClasses(ancestor)
                                             .stream()
                                             .filter(descriptor -> !descriptor.getClassName().equals(excludeName))
                                             .map(JactlCompletionContributor::createLookup)
@@ -527,17 +565,5 @@ public class JactlCompletionContributor extends CompletionContributor {
     return LookupElementBuilder.create(entry.name())
                                .withTypeText(packageName)
                                .withIcon(AllIcons.Nodes.Class);
-  }
-
-  private static JactlType getType(JactlUserDataHolder node) {
-    if (node instanceof JactlType) {
-      JactlType type = (JactlType) node;
-      return type;
-    }
-    if (node instanceof Expr) {
-      Expr expr = (Expr) node;
-      return expr.type;
-    }
-    return null;
   }
 }

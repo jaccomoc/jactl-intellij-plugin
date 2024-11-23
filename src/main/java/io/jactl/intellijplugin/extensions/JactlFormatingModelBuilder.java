@@ -111,7 +111,7 @@ public class JactlFormatingModelBuilder implements FormattingModelBuilder {
       return new JactlCodeBlock(parentBlock, child, Wrap.createWrap(WrapType.NONE, false), alignment, spacingBuilder, false);
     }
     else if (child.getElementType() instanceof JactlStmtElementType || isList(child) || child.getElementType() == JactlNameElementType.PACKAGE) {
-      return new JactlStmtBlock(parentBlock, child, node.getElementType() == JactlParserDefinition.FILE, spacingBuilder, alignment);
+      return new JactlStmtBlock(parentBlock, child, node.getElementType() == JactlParserDefinition.JACTL_FILE_ELEMENT_TYPE, spacingBuilder, alignment);
     }
     else if (isBinaryOrMethodCallExpr(child)) {
       return new JactlBinaryExpr(parentBlock, child, spacingBuilder, alignment);

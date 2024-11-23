@@ -35,10 +35,8 @@ import com.sun.jdi.AbsentInformationException;
 import com.sun.jdi.Location;
 import com.sun.jdi.ReferenceType;
 import com.sun.jdi.request.ClassPrepareRequest;
-import io.jactl.intellijplugin.JactlFile;
-import io.jactl.intellijplugin.JactlLanguage;
-import io.jactl.intellijplugin.JactlParserAdapter;
-import io.jactl.intellijplugin.JactlUtils;
+import io.jactl.Utils;
+import io.jactl.intellijplugin.*;
 import io.jactl.intellijplugin.common.JactlPlugin;
 import io.jactl.intellijplugin.psi.JactlPsiElement;
 import io.jactl.intellijplugin.psi.interfaces.JactlPsiType;
@@ -48,6 +46,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.io.File;
 import java.util.List;
+import java.util.Set;
 
 public class JactlPositionManager implements PositionManager {
 
@@ -153,5 +152,10 @@ public class JactlPositionManager implements PositionManager {
       }
     }
     return null;
+  }
+
+  @Override
+  public @Nullable Set<? extends FileType> getAcceptedFileTypes() {
+    return Utils.setOf(JactlFileType.INSTANCE);
   }
 }

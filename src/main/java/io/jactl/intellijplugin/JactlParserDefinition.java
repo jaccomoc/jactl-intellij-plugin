@@ -10,6 +10,7 @@ import com.intellij.psi.PsiFile;
 import com.intellij.psi.impl.source.tree.*;
 import com.intellij.psi.tree.IElementType;
 import com.intellij.psi.tree.IFileElementType;
+import com.intellij.psi.tree.ILazyParseableElementType;
 import com.intellij.psi.tree.TokenSet;
 import io.jactl.intellijplugin.psi.JactlNameElementType;
 import io.jactl.intellijplugin.psi.JactlTokenTypes;
@@ -18,7 +19,8 @@ import io.jactl.intellijplugin.psi.impl.JactlPsiIdentifierImpl;
 import org.jetbrains.annotations.NotNull;
 
 public class JactlParserDefinition extends DefaultASTFactoryImpl implements ParserDefinition {
-  public static final IFileElementType FILE = new IFileElementType(JactlLanguage.INSTANCE);
+  public static final IFileElementType JACTL_FILE_ELEMENT_TYPE = JactlNameElementType.JACTL_FILE;
+
   public static final Logger LOG = Logger.getInstance(JactlTypes.class);
 
   @NotNull
@@ -55,7 +57,7 @@ public class JactlParserDefinition extends DefaultASTFactoryImpl implements Pars
   @NotNull
   @Override
   public IFileElementType getFileNodeType() {
-    return FILE;
+    return JACTL_FILE_ELEMENT_TYPE;
   }
 
   @NotNull
@@ -64,6 +66,15 @@ public class JactlParserDefinition extends DefaultASTFactoryImpl implements Pars
     JactlFile file = new JactlFile(viewProvider);
     //System.out.println("DEBUG: new file=" + System.identityHashCode(file));
     return file;
+  }
+
+  @Override
+  public @NotNull LazyParseableElement createLazy(@NotNull ILazyParseableElementType type, CharSequence text) {
+    if (type instanceof IFileElementType) {
+      return new JactlFileElement(text);
+    }
+
+    return super.createLazy(type, text);
   }
 
   @NotNull

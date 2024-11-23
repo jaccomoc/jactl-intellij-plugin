@@ -3,11 +3,12 @@ package io.jactl.intellijplugin.psi;
 import com.intellij.psi.tree.IElementType;
 import com.intellij.psi.tree.IFileElementType;
 import io.jactl.JactlName;
+import io.jactl.intellijplugin.JactlFileElementType;
 import io.jactl.intellijplugin.JactlLanguage;
 
 public class JactlNameElementType extends IElementType {
 
-  public static IElementType         JACTL_FILE = new IFileElementType("FILE", JactlLanguage.INSTANCE);
+  public static IFileElementType     JACTL_FILE = new JactlFileElementType();
   public static JactlNameElementType CLASS      = new JactlNameElementType("CLASS");
   public static JactlNameElementType PACKAGE    = new JactlNameElementType("PACKAGE");
   public static JactlNameElementType FUNCTION   = new JactlNameElementType("FUNCTION");
@@ -35,7 +36,6 @@ public class JactlNameElementType extends IElementType {
   }
 
   public static JactlName.NameType getNameType(JactlNameElementType type) {
-    if (type == JACTL_FILE) return JactlName.NameType.FILE;
     if (type == PACKAGE)    return JactlName.NameType.PACKAGE;
     if (type == CLASS)      return JactlName.NameType.CLASS;
     if (type == FUNCTION)   return JactlName.NameType.FUNCTION;

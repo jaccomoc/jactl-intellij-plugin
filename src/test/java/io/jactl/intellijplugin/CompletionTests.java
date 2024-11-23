@@ -56,7 +56,7 @@ public class CompletionTests extends BasePlatformTestCase {
 
   protected void setUp() throws Exception {
     super.setUp();
-    System.out.println(getTestName(true));
+    //System.out.println(getTestName(true));
     String testData = "";
     myFixture.copyDirectoryToProject("completionTests", testData);
 
@@ -82,6 +82,14 @@ public class CompletionTests extends BasePlatformTestCase {
 
   private void test(String text, Stream<String>... expected) {
     test(text, Arrays.stream(expected).flatMap(s -> s).toArray(String[]::new));
+  }
+
+  private void doTest(String text, String... expected) {
+    doTtestWithFileName(getFileName(), text, MatchType.ALL, expected);
+  }
+
+  private void doTest(String text, Stream<String>... expected) {
+    doTtestWithFileName(getFileName(), text, MatchType.ALL, Arrays.stream(expected).flatMap(s -> s).toArray(String[]::new));
   }
 
   private void test(String text, String... expected) {
@@ -124,6 +132,15 @@ public class CompletionTests extends BasePlatformTestCase {
   }
 
   private void testWithFileName(String fileName, String text, MatchType matchType, String... expected) {
+    doTtestWithFileName(fileName, text, matchType, expected);
+    doTtestWithFileName(fileName, text.replaceAll("<caret>", "/*comment*/ <caret>"), matchType, expected);
+    doTtestWithFileName(fileName, text.replaceAll("<caret>", "/*comment*/ <caret> /*comment*/"), matchType, expected);
+    doTtestWithFileName(fileName, text.replaceAll("\\.", " . "), matchType, expected);
+    doTtestWithFileName(fileName, text.replaceAll("\\.", "/*comment*/./*comment*/"), matchType, expected);
+    doTtestWithFileName(fileName, text.replaceAll("\\.", " /*comment*/ . /*comment*/ "), matchType, expected);
+  }
+
+  private void doTtestWithFileName(String fileName, String text, MatchType matchType, String... expected) {
     myFixture.addFileToProject(fileName, text);
     PsiFile psiFile = myFixture.configureByFile(fileName);
     try {
@@ -162,10 +179,6 @@ public class CompletionTests extends BasePlatformTestCase {
   }
 
   ////////////////////////////////
-
-  @Test public void testStuff() {
-    test("class XYZ{}\nclass X extends <caret> {}", "XYZ");
-  }
 
   @Test public void testExtendsClassName() {
     test("class XYZ{}; class X <caret>", "extends");
@@ -583,7 +596,7 @@ public class CompletionTests extends BasePlatformTestCase {
     testExcludes("package a.b.c\n<caret>", "package");
     testExcludes("import a.b.C\n<caret>", "package");
     test("package <caret>", "org");
-    test("package o<caret>", Stream.of());
+    doTest("package o<caret>", Stream.of());
     test("package org.<caret>", Stream.of("test","test2"));
     test("package org.test2.<caret>", Stream.of("sub"));
     test("package org.test2.sub.<caret>", Stream.of());
@@ -634,5 +647,30 @@ public class CompletionTests extends BasePlatformTestCase {
     test("class X{}; def x; if (true) { x++; (<caret>)x", Stream.of("X"), Stream.of(JactlUtils.BUILTIN_TYPES));
 
     testInOrgTest("class X{}; def x; x as <caret>", Stream.of("X", "XYZ", "AClass"), Stream.of(JactlUtils.BUILTIN_TYPES));
+  }
+
+  @Test public void testInnerClass() {
+    test("org.<caret>", Stream.of("test", "test2"));
+    test("org.test.AClass.<caret>", Stream.of("B", "C", "fromJson", "func"));
+    test("new org.test.AClass.<caret>", Stream.of("B", "C"));
+    test("new org.test.AClass.B.<caret>", Stream.of("XXX"));
+    test("class X { class Y {} }; new X.<caret>", Stream.of("Y"));
+    test("class X { class Y { static def f() {} } }; X.<caret>", Stream.of("Y", "fromJson"));
+    test("class X { class Y { static def f() {} } }; X.Y.<caret>", Stream.of("f", "fromJson"));
+  }
+
+  @Test public void testNestedBlocks() {
+    test("int xxx = 1\n<caret>long yyy = 2; double zzz = 3", Stream.of("xxx", "class"), Functions.getGlobalFunctionNames().stream(), globalVars.stream(), Stream.of(JactlUtils.BUILTIN_TYPES), Stream.of(JactlUtils.BEGINNING_KEYWORDS));
+    test("int xxx = 1\nlong yyy = 2; <caret>double zzz = 3", Stream.of("xxx", "yyy", "class"), Functions.getGlobalFunctionNames().stream(), globalVars.stream(), Stream.of(JactlUtils.BUILTIN_TYPES), Stream.of(JactlUtils.BEGINNING_KEYWORDS));
+    test("int x = 3\nint y = <caret>\nint zzz\n", Stream.of("x"), Functions.getGlobalFunctionNames().stream(), globalVars.stream());
+    test("int x = 3\n{ int y = <caret> }\nint zzz\n", Stream.of("x"), Functions.getGlobalFunctionNames().stream(), globalVars.stream());
+    test("int x = 3\ndef f(int y = <caret>) {}\nint zzz\n", Stream.of("x", "f"), Functions.getGlobalFunctionNames().stream(), globalVars.stream());
+    test("int x = 3\ndef f(int i = 2, int j = <caret>) {}\nint zzz\n", Stream.of("x", "f", "i"), Functions.getGlobalFunctionNames().stream(), globalVars.stream());
+    test("int x = 3\ndef f(int i = 2, int j = 3 + <caret>) {}\nint zzz\n", Stream.of("x", "f", "i"), Functions.getGlobalFunctionNames().stream(), globalVars.stream());
+    test("int x = 3\ndef f(int y = 2) { <caret> }\nint zzz\n", Stream.of("x", "f", "y"), Functions.getGlobalFunctionNames().stream(), globalVars.stream(), Stream.of(JactlUtils.BUILTIN_TYPES), Stream.of(JactlUtils.BEGINNING_KEYWORDS));
+    test("int x = 3\ndef f(int y) { def g(int z = <caret>) {} }\nint zzz\n", Stream.of("x", "f", "y", "g"), Functions.getGlobalFunctionNames().stream(), globalVars.stream());
+    test("int x = 3\ndef f(int y) { <caret>def z = 2 }\nint zzz\n", Stream.of("x", "f", "y"), Functions.getGlobalFunctionNames().stream(), globalVars.stream(), Stream.of(JactlUtils.BUILTIN_TYPES), Stream.of(JactlUtils.BEGINNING_KEYWORDS));
+    test("int x = 3\ndef f(int y) { <caret>def g(int z = 2) {} }\nint zzz\n", Stream.of("x", "f", "y" /*,"g"*/), Functions.getGlobalFunctionNames().stream(), globalVars.stream(), Stream.of(JactlUtils.BUILTIN_TYPES), Stream.of(JactlUtils.BEGINNING_KEYWORDS));
+    test("int x = 3\nclass X { def f(int y) { <caret>def g(int z = 2) {} } }\nint zzz\n", Stream.of("f", "y", "X", "X.fromJson", "fromJson", "this" /*,"g"*/), Functions.getGlobalFunctionNames().stream(), globalVars.stream(), Stream.of(JactlUtils.BUILTIN_TYPES), Stream.of(JactlUtils.BEGINNING_KEYWORDS));
   }
 }

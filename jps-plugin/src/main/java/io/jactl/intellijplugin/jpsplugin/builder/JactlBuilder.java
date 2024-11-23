@@ -17,6 +17,7 @@
 
 package io.jactl.intellijplugin.jpsplugin.builder;
 
+import com.intellij.openapi.diagnostic.Logger;
 import io.jactl.*;
 import io.jactl.Utils;
 import io.jactl.compiler.ClassCompiler;
@@ -42,7 +43,6 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -50,6 +50,9 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
 public class JactlBuilder extends ModuleLevelBuilder {
+
+  Logger LOG = Logger.getInstance(JactlBuilder.class);
+
   protected JactlBuilder() {
     super(BuilderCategory.TRANSLATOR);
   }
@@ -85,10 +88,12 @@ public class JactlBuilder extends ModuleLevelBuilder {
           if (classDecl.isScriptClass()) {
             ScriptCompiler compiler = new ScriptCompiler(source, context, classDecl);
             compiler.compile();
+            LOG.warn("Compilation of script " + className + " finished");
           }
           else {
             ClassCompiler compiler = new ClassCompiler(source, context, pkgName, classDecl, className + JactlPlugin.DOT_SUFFIX);
             compiler.compileClass();
+            LOG.warn("Compilation of class " + className + " finished");
           }
         }
         catch (CompileError e) {
@@ -154,6 +159,7 @@ public class JactlBuilder extends ModuleLevelBuilder {
     String baseJavaPkgFile = JactlPlugin.BASE_JACTL_PKG_PATH;
     AtomicReference<JactlContext> jactlContextRef = new AtomicReference<>();
     jactlContextRef.set(JactlContext.create()
+                                    .debug(Integer.getInteger("jactl.debug", 0))
                                     .javaPackage(baseJavaPkg)
                                     .evaluateConstExprs(false)
                                     .idePlugin(true)

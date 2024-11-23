@@ -15,22 +15,21 @@
  *
  */
 
-package io.jactl.intellijplugin.extensions.debugger;
+package io.jactl.intellijplugin;
 
-import com.intellij.ui.classFilter.ClassFilter;
-import com.intellij.ui.classFilter.DebuggerClassFilterProvider;
-import io.jactl.Utils;
+import com.intellij.lang.ASTNode;
+import com.intellij.lang.PsiBuilder;
+import com.intellij.openapi.project.Project;
+import com.intellij.psi.tree.IFileElementType;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
+public class JactlFileElementType extends IFileElementType {
 
-public class JactlDebuggerClassFilterProvider implements DebuggerClassFilterProvider {
-  private final static List<ClassFilter> classFilters = Utils.listOf(new ClassFilter("java.*"),
-                                                                     new ClassFilter("io.jactl.*"));
+  public JactlFileElementType() {
+    super("jactl.FILE", JactlLanguage.INSTANCE);
+  }
 
   @Override
-  public List<ClassFilter> getFilters() {
-    return classFilters;
+  public ASTNode createNode(CharSequence text) {
+    return new JactlFileElement(text);
   }
 }
