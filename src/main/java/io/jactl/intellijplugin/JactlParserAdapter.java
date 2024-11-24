@@ -44,10 +44,6 @@ public class JactlParserAdapter implements PsiParser {
 
   private static final int CACHE_SIZE = 100;
 
-  private static final Map<JactlFile,ParsedScript> parsedScripts = new LinkedHashMap<JactlFile, ParsedScript>(CACHE_SIZE * 2, 0.75f, true) {
-    @Override protected boolean removeEldestEntry(Map.Entry<JactlFile,ParsedScript> eldest) { return size() > CACHE_SIZE; }
-  };
-
   private Project project;
 
   public JactlParserAdapter(Project project) {
@@ -77,13 +73,6 @@ public class JactlParserAdapter implements PsiParser {
 
   private static ParsedScript parseAndResolve(Project project, JactlTokeniser tokeniser, JactlFile jactlFile, PsiBuilder builder) {
     ParsedScript parsed = parse(tokeniser, jactlFile, builder);
-
-    String sourceCode = tokeniser.getBufferSequence().toString();
-    synchronized (parsedScripts) {
-      if (jactlFile != null && !sourceCode.contains(CompletionUtilCore.DUMMY_IDENTIFIER)) {
-        parsedScripts.put(jactlFile, parsed);
-      }
-    }
 
     if (jactlFile instanceof JactlCodeFragment) {
       parsed.resolve(project, tokeniser.getJactl(), jactlFile.getContext());
@@ -200,18 +189,9 @@ public class JactlParserAdapter implements PsiParser {
     if (parsedScript != null && parsedScript.getSourceCode().equals(sourceCode.intern())) {
       return parsedScript;
     }
-    ParsedScript parsed = null;
-    synchronized (parsedScripts) {
-      if (parsedScript == null) {
-        parsed = parsedScripts.get(file);
-      }
-      if (parsed == null || !parsed.getSourceCode().equals(sourceCode)) {
-        JactlTokeniser tokeniser = new JactlTokeniser(file.getProject());
-        tokeniser.tokenise(sourceCode, 0, sourceCode.length());
-        parsed = parseAndResolve(file.getProject(), tokeniser, file, null);
-      }
-    }
-    return parsed;
+    JactlTokeniser tokeniser = new JactlTokeniser(file.getProject());
+    tokeniser.tokenise(sourceCode, 0, sourceCode.length());
+    return parseAndResolve(file.getProject(), tokeniser, file, null);
   }
 
   public static final class FieldDescriptor {
