@@ -2,6 +2,7 @@ package io.jactl.intellijplugin;
 
 import com.intellij.extapi.psi.PsiFileBase;
 import com.intellij.openapi.fileTypes.FileType;
+import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.psi.FileViewProvider;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.tree.IFileElementType;
@@ -20,8 +21,16 @@ import java.util.Map;
 
 public class JactlFile extends PsiFileBase implements JactlPsiElement {
 
+  long lastModified;
+  String text;
+
   public JactlFile(FileViewProvider viewProvider) {
     super(viewProvider, JactlLanguage.INSTANCE);
+    lastModified = getModificationStamp();
+    text = getText();
+    if (text != null) {
+      text = text.intern();
+    }
   }
 
   /**
@@ -33,6 +42,14 @@ public class JactlFile extends PsiFileBase implements JactlPsiElement {
     name = JactlPlugin.removeSuffix(name);
     int index = name.lastIndexOf(File.separatorChar);
     return name.substring(index + 1);
+  }
+
+  public VirtualFile getVirtualFile() {
+    VirtualFile virtualFile = super.getVirtualFile();
+    if (virtualFile == null) {
+      return getOriginalFile().getVirtualFile();
+    }
+    return virtualFile;
   }
 
   /**
@@ -49,7 +66,18 @@ public class JactlFile extends PsiFileBase implements JactlPsiElement {
     return JactlFileType.INSTANCE;
   }
 
-
+  @Override
+  public String getText() {
+    long modificationStamp = getModificationStamp();
+    if (modificationStamp != lastModified || text == null) {
+      text = super.getText();
+      if (text != null) {
+        text.intern();
+      }
+      lastModified = modificationStamp;
+    }
+    return text;
+  }
 
   @Override
   public String toString() {

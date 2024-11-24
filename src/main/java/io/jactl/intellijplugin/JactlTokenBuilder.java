@@ -87,7 +87,16 @@ public class JactlTokenBuilder extends BuilderImpl {
   public boolean hasErrors()     { return !errors.isEmpty(); }
 
   void insertEventBefore(JactlMarker newMarker, JactlMarker existing) {
-    int idx = IntStream.range(0, events.size()).filter(i -> events.get(i).getMarker() == existing).filter(i -> events.get(i).isStart()).findFirst().getAsInt();
+    int idx = -1;
+    for (int i = 0; i < events.size(); i++) {
+      if (events.get(i).getMarker() == existing) {
+        idx = i;
+        break;
+      }
+    }
+    if (idx == -1) {
+      throw new IllegalStateException("There is no event: " + existing);
+    }
     events.add(idx, new MarkerEvent(newMarker, MarkerEvent.State.START));
   }
 

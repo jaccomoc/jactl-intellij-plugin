@@ -19,7 +19,7 @@ public interface JactlPsiElement extends PsiElement  {
     if (file == null) {
       return null;
     }
-    return file.getText();
+    return file.getText().intern();
   }
 
   default JactlUserDataHolder getJactlAstNode() {

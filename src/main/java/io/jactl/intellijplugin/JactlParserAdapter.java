@@ -61,27 +61,21 @@ public class JactlParserAdapter implements PsiParser {
 
     JactlTokeniser tokeniser = (JactlTokeniser)((PsiBuilderImpl)builder).getLexer();
     PsiFile        userData  = builder.getUserData(FileContextUtil.CONTAINING_FILE_KEY);
-    ParsedScript   parsedScript;
     if (userData instanceof DummyHolder) {
       // Used when parsing evaluation expressions in debugger
-      parsedScript = parse(tokeniser, null, builder);
+      ParsedScript parsedScript = parse(tokeniser, null, builder);
       parsedScript.resolve(project, tokeniser.getJactl(), userData.getContext());
     }
     else {
       JactlFile file = userData instanceof JactlFile ? (JactlFile) userData : null;
-      parsedScript = parseAndResolve(project, tokeniser, file, builder);
+      parseAndResolve(project, tokeniser, file, builder);
     }
 
     ASTNode node = builder.getTreeBuilt();          // calls the ASTFactory.createComposite() etc...
-    node.putUserData(PARSED_SCRIPT, parsedScript);  // cache for completions etc where we don't need to store for longer
     return node;
   }
 
   private static ParsedScript parseAndResolve(Project project, JactlTokeniser tokeniser, JactlFile jactlFile, PsiBuilder builder) {
-    if (jactlFile != null) {
-      jactlFile = (JactlFile) jactlFile.getOriginalFile();
-    }
-
     ParsedScript parsed = parse(tokeniser, jactlFile, builder);
 
     String sourceCode = tokeniser.getBufferSequence().toString();
@@ -97,6 +91,8 @@ public class JactlParserAdapter implements PsiParser {
     else {
       parsed.resolve(project, jactlFile);
     }
+
+    jactlFile.putUserData(PARSED_SCRIPT, parsed);
     return parsed;
   }
 
@@ -196,17 +192,19 @@ public class JactlParserAdapter implements PsiParser {
 
   @NotNull
   private static ParsedScript getParsedScript(JactlPsiElement element) {
-    ParsedScript parsedScript = element.getFile().getUserData(PARSED_SCRIPT);
-    if (parsedScript != null) {
-      return parsedScript;
-    }
     return getParsedScript(element.getFile(), element.getSourceCode());
   }
 
   private static ParsedScript getParsedScript(JactlFile file, String sourceCode) {
-    ParsedScript parsed;
+    ParsedScript parsedScript = file.getUserData(PARSED_SCRIPT);
+    if (parsedScript != null && parsedScript.getSourceCode().equals(sourceCode.intern())) {
+      return parsedScript;
+    }
+    ParsedScript parsed = null;
     synchronized (parsedScripts) {
-      parsed = parsedScripts.get(file);
+      if (parsedScript == null) {
+        parsed = parsedScripts.get(file);
+      }
       if (parsed == null || !parsed.getSourceCode().equals(sourceCode)) {
         JactlTokeniser tokeniser = new JactlTokeniser(file.getProject());
         tokeniser.tokenise(sourceCode, 0, sourceCode.length());
@@ -310,7 +308,7 @@ public class JactlParserAdapter implements PsiParser {
     }
 
     public String getSourceCode() {
-      return sourceCode;
+      return sourceCode.intern();
     }
 
     public void addASTNode(JactlFile file, IElementType type, int offset, JactlUserDataHolder node) {
@@ -326,6 +324,13 @@ public class JactlParserAdapter implements PsiParser {
       if (type != null && type != LIST) {
         LOG.warn("Node is null (type=" + type + ", offset=" + offset + ")");
       }
+    }
+
+    private JactlUserDataHolder lookupJactlAstNode(JactlPsiElement element) {
+      if (sourceCode.equals(element.getSourceCode())) {
+        return jactlAstNodes.get(element.getAstKey());
+      }
+      return element.getJactlAstNode();
     }
 
     public JactlUserDataHolder getJactlAstNode(JactlAstKey astKey) {
@@ -345,16 +350,18 @@ public class JactlParserAdapter implements PsiParser {
       return resolver.getClassDecl(name);
     }
 
-    public List<Object> getVariablesAndFunctions(JactlPsiElement context, JactlPsiElement element) {
-      JactlAstKey astKey = context.getAstKey();
-      JactlUserDataHolder astNode = getJactlAstNode(astKey);
-      if (astNode == null) {
+    public List<Object> getVariablesAndFunctions(JactlPsiElement parentElement, JactlPsiElement element) {
+      JactlAstKey astKey = parentElement.getAstKey();
+      JactlUserDataHolder parentNode = getJactlAstNode(astKey);
+      if (parentNode == null) {
         return Collections.EMPTY_LIST;
       }
-      Stmt.Block block = astNode.getBlock();
+      Stmt.Block block = parentNode.getBlock();
+      JactlFile  file  = parentElement.getFile();
 
-      // Get location from element
-      Token location = element.getJactlAstNode().getLocation();
+      JactlUserDataHolder elementNode     = lookupJactlAstNode(element);
+      Token               location        = elementNode.getLocation();
+      Token               contextLocation = elementNode.getContextLocation();
 
       Set<Object> names = new HashSet<>();
       List<Object> result = new ArrayList<>();
@@ -369,15 +376,21 @@ public class JactlParserAdapter implements PsiParser {
       // Get all variables in current block declared before us.
       // If we are inside a VarDecl then we need to use its location to avoid returning the
       // variable name of the variable being declared.
-      if (astNode instanceof Expr.Identifier) {
+      if (parentNode instanceof Expr.Identifier) {
         JactlPsiElement varDeclPsi = (JactlPsiElement) JactlUtils.getAncestor(element, JactlStmtElementType.VAR_DECL);
-        location = varDeclPsi == null ? location : varDeclPsi.getJactlAstNode().getLocation();
+        if (varDeclPsi != null) {
+          JactlUserDataHolder varDecl = lookupJactlAstNode(varDeclPsi);
+          location        = varDecl.getLocation();
+        }
       }
-      final Token finalLocation = location;
       if (block != null) {
         // Iterator up through all enclosing blocks and add vars/functions that were already declared before reference
         for (Stmt.Block parent = block; parent != null; parent = parent.enclosingBlock) {
-          Stream.concat(parent.variables.values().stream().filter(v -> Utils.isEarlier(v.location, finalLocation)),
+          // Work out whether we are in a debugger expression or in the actual code and switch to context
+          // location if we step into different file from starting file
+          String source = parent.getLocation().getSource();
+          Token locationToUse = source.equals(file.getSourceCode()) ? location : contextLocation;
+          Stream.concat(parent.variables.values().stream().filter(v -> Utils.isEarlier(v.location, locationToUse)),
                         parent.functions.stream().map(f -> f.declExpr.varDecl))
                 .filter(v -> !v.name.getStringValue().startsWith(Utils.JACTL_PREFIX))
                 .forEach(v -> addResult.accept(v.name.getStringValue(), v));
@@ -535,10 +548,15 @@ public class JactlParserAdapter implements PsiParser {
       Predicate<Stmt> notGlobalDecl = s -> !(s instanceof Stmt.VarDecl) || !((Stmt.VarDecl)s).name.getStringValue().equals(Utils.JACTL_GLOBALS_NAME);
       // Strip out the VarDecl for _j$$globals
       stmts.stmts.addAll(scriptBlock.stmts.stmts.stream().filter(notGlobalDecl).collect(Collectors.toList()));
-      Expr                closure      = Parser.convertBlockToInvokedClosure(newBlock);
-      JactlUserDataHolder jactlAstNode = parent.getJactlAstNode();
-      Stmt.Block          contextBlock = jactlAstNode.getBlock();
-      resolver.resolveExpr(contextBlock, closure, jactlAstNode.getLocation()).forEach(e -> {
+      if (stmts.stmts.isEmpty()) {
+        // Nothing to do
+        return;
+      }
+      Expr                closure         = Parser.convertBlockToInvokedClosure(newBlock);
+      JactlUserDataHolder jactlAstNode    = lookupJactlAstNode(parent);
+      Stmt.Block          contextBlock    = jactlAstNode.getBlock();
+      Token               contextLocation = jactlAstNode.getLocation();
+      resolver.resolveExpr(contextBlock, closure, contextLocation).forEach(e -> {
         int offset = e.getLocation().getOffset();
         errors.putIfAbsent(offset, new ArrayList<>());
         errors.get(offset).add(e.getErrorMessage());

@@ -68,14 +68,14 @@ public class JactlParserDefinition extends DefaultASTFactoryImpl implements Pars
     return file;
   }
 
-  @Override
-  public @NotNull LazyParseableElement createLazy(@NotNull ILazyParseableElementType type, CharSequence text) {
-    if (type instanceof IFileElementType) {
-      return new JactlFileElement(text);
-    }
-
-    return super.createLazy(type, text);
-  }
+//  @Override
+//  public @NotNull LazyParseableElement createLazy(@NotNull ILazyParseableElementType type, CharSequence text) {
+//    if (type instanceof IFileElementType) {
+//      return new JactlFileElement(text);
+//    }
+//
+//    return super.createLazy(type, text);
+//  }
 
   @NotNull
   @Override
