@@ -7,7 +7,7 @@ plugins {
     id("java")
 }
 
-version = "1.0.0-SNAPSHOT"
+version = "1.0.0"
 
 java {
     withJavadocJar()
@@ -39,9 +39,9 @@ dependencies {
         bundledPlugin("com.intellij.java")
         instrumentationTools()
         testFramework(TestFrameworkType.Platform)
-        //pluginVerifier()
+        pluginVerifier()
     }
-    implementation("io.jactl:jactl:2.0.1-SNAPSHOT")
+    implementation("io.jactl:jactl:2.1.0")
     implementation(project(":jps-plugin"))
     testImplementation("junit:junit:4.13.1")
     testRuntimeOnly("junit:junit:4.13")
@@ -63,18 +63,18 @@ intellijPlatform {
         }
 
     }
-//    pluginVerification {
-//        ides {
-//            ide(IntelliJPlatformType.IntellijIdeaCommunity, "2024.1.4")
-//            //local(file("/path/to/ide/"))
-//            recommended()
-//            select {
-//                types = listOf(IntelliJPlatformType.IntellijIdeaCommunity)
-//                channels = listOf(ProductRelease.Channel.RELEASE)
-//                sinceBuild = "241"
-//                untilBuild = "242.*"
-//            }
-//        }
-//    }
+    pluginVerification {
+        ides {
+            ide(IntelliJPlatformType.IntellijIdeaCommunity, "2024.1.4")
+            //local(file("/path/to/ide/"))
+            recommended()
+            select {
+                types = listOf(IntelliJPlatformType.IntellijIdeaCommunity)
+                channels = listOf(ProductRelease.Channel.RELEASE)
+                sinceBuild = "241"
+                //untilBuild = "242.*"
+            }
+        }
+    }
 }
 
