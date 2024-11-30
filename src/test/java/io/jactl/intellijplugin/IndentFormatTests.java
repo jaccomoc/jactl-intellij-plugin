@@ -566,6 +566,21 @@ public class IndentFormatTests extends BaseTypingTestCase {
     verify(expected);
   }
 
+  public void testChainedCalls2c() {
+    String text =
+      "abc.method1()<caret>\n" +
+      "   .filter()\n";
+    myFixture.configureByText("script.jactl", text);
+    performTypingNoSpaces("\n.map()");
+    EditorTestUtil.executeAction(myFixture.getEditor(), IdeActions.ACTION_EDITOR_EMACS_TAB);
+    String expected =
+      "abc.method1()\n" +
+      "   .map()\n" +
+      "   .filter()\n";
+    reformat();
+    verify(expected);
+  }
+
   public void testChainedCalls3() {
     String text =
       "def x = [1,2,3].map{ it + 1 }\n" +
@@ -588,6 +603,25 @@ public class IndentFormatTests extends BaseTypingTestCase {
     performTypingNoSpaces(text);
     reformat();
     verify(text);
+  }
+
+  public void testChainedCalls5() {
+    String text =
+      "[1,2,3].map{ it + 1 }<caret>";
+    myFixture.configureByText("script.jactl", text);
+    // Note: for some reason without the leading space the auto-indent won't work
+    performTyping("\n .filter{ it != 2 }");
+    EditorTestUtil.executeAction(myFixture.getEditor(), IdeActions.ACTION_EDITOR_EMACS_TAB);
+    verify("[1,2,3].map{ it + 1 }\n" +
+           "       .filter{ it != 2 }");
+    performTyping("\n .map{ it }");
+    EditorTestUtil.executeAction(myFixture.getEditor(), IdeActions.ACTION_EDITOR_EMACS_TAB);
+    String expected = "[1,2,3].map{ it + 1 }\n" +
+                      "       .filter{ it != 2 }\n" +
+                      "       .map{ it }";
+    verify(expected);
+    reformat();
+    verify(expected);
   }
 
   public void testTernary() {

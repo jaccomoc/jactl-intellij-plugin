@@ -24,22 +24,23 @@ import org.jetbrains.jps.incremental.BuilderService;
 import org.jetbrains.jps.incremental.ModuleLevelBuilder;
 import org.jetbrains.jps.incremental.TargetBuilder;
 
+import java.util.Arrays;
 import java.util.List;
 
 public class JactlBuilderService extends BuilderService {
 
   @Override
   public @NotNull List<? extends BuildTargetType<?>> getTargetTypes() {
-    return Utils.listOf(io.jactl.intellijplugin.jpsplugin.builder.JactlBuildTarget.PRODUCTION, io.jactl.intellijplugin.jpsplugin.builder.JactlBuildTarget.TESTS);
+    return Arrays.asList(io.jactl.intellijplugin.jpsplugin.builder.JactlBuildTarget.PRODUCTION, io.jactl.intellijplugin.jpsplugin.builder.JactlBuildTarget.TESTS);
   }
 
   @Override
   public @NotNull List<? extends ModuleLevelBuilder> createModuleLevelBuilders() {
-    return Utils.listOf(new JactlBuilder());
+    return Arrays.asList(new JactlBuilder());
   }
 
   @Override
   public @NotNull List<? extends TargetBuilder<?, ?>> createBuilders() {
-    return Utils.listOf();
+    return Arrays.asList();
   }
 }

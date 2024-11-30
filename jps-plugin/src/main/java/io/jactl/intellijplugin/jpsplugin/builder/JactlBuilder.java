@@ -19,7 +19,6 @@ package io.jactl.intellijplugin.jpsplugin.builder;
 
 import com.intellij.openapi.diagnostic.Logger;
 import io.jactl.*;
-import io.jactl.Utils;
 import io.jactl.compiler.ClassCompiler;
 import io.jactl.compiler.ScriptCompiler;
 import io.jactl.intellijplugin.common.JactlBundle;
@@ -43,6 +42,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -118,7 +118,7 @@ public class JactlBuilder extends ModuleLevelBuilder {
               try (OutputStream stream = new FileOutputStream(outputFile)) {
                 stream.write(bytes);
               }
-              outputConsumer.registerCompiledClass(target, new CompiledClass(outputFile, Utils.listOf(sourceFile), descriptor.getJavaPackagedName(), new BinaryContent(bytes)));
+              outputConsumer.registerCompiledClass(target, new CompiledClass(outputFile, Arrays.asList(sourceFile), descriptor.getJavaPackagedName(), new BinaryContent(bytes)));
             }
             catch (IOException e) {
               error(compileContext, e.getMessage());
@@ -131,7 +131,7 @@ public class JactlBuilder extends ModuleLevelBuilder {
 
   @Override
   public @NotNull List<String> getCompilableFileExtensions() {
-    return Utils.listOf(JactlPlugin.SUFFIX);
+    return Arrays.asList(JactlPlugin.SUFFIX);
   }
 
   @Override

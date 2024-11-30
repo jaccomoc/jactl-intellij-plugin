@@ -53,7 +53,7 @@
     <lang.commenter                language="Jactl" implementationClass="io.jactl.intellijplugin.extensions.JactlCommenter" />
 
     <!-- runner/debugger -->
-    <compileServer.plugin              classpath="jps-plugin.jar;jactl-2.0.1-SNAPSHOT.jar"/>
+    <compileServer.plugin              classpath="jps-plugin.jar;jactl-2.1.0.jar"/>
     <compiler.buildTargetScopeProvider implementation="io.jactl.intellijplugin.extensions.compiler.JactlTargetScopeProvider" />
     <runConfigurationProducer          implementation="io.jactl.intellijplugin.extensions.runner.JactlRunConfigurationProducer" />
     <programRunner                     implementation="io.jactl.intellijplugin.extensions.runner.JactlProgramRunner"/>

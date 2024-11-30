@@ -25,12 +25,13 @@ import org.jetbrains.jps.model.JpsProject;
 import org.jetbrains.jps.model.serialization.JpsModelSerializerExtension;
 import org.jetbrains.jps.model.serialization.JpsProjectExtensionSerializer;
 
+import java.util.Arrays;
 import java.util.List;
 
 public class JactlModelSerializerExtension extends JpsModelSerializerExtension {
   @Override
   public @NotNull List<? extends JpsProjectExtensionSerializer> getProjectExtensionSerializers() {
-    return Utils.listOf(new JpsProjectExtensionSerializer("jactl.xml", "JactlConfiguration") {
+    return Arrays.asList(new JpsProjectExtensionSerializer("jactl.xml", "JactlConfiguration") {
       @Override
       public void loadExtension(@NotNull JpsProject project, @NotNull Element componentTag) {
         JpsJactlSettings configuration = XmlSerializer.deserialize(componentTag, JpsJactlSettings.class);

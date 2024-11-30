@@ -94,7 +94,6 @@ public class JactlPsiNameImpl extends AbstractJactlPsiStmt implements JactlPsiNa
   public @NotNull SearchScope getUseScope() {
     JactlPsiElement parent = getDeclParent();
     if (parent == null) {
-      LOG.warn("Could not find decl parent for " + this);
       return GlobalSearchScope.allScope(getProject());
     }
     JactlUserDataHolder jactlAstNode = parent.getJactlAstNode();
