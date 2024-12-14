@@ -616,11 +616,11 @@ public class CompletionTests extends BasePlatformTestCase {
 
   @Test public void testBuiltinMethods() {
     testIncludes("List x; x.<caret>", "size", "map", "toString");
-    test("List x; x.<caret>", Functions.getAllMethods(JactlType.LIST).stream().map(f -> f.name));
-    test("var x = [1,2,3]; x.<caret>", Functions.getAllMethods(JactlType.LIST).stream().map(f -> f.name));
+    test("List x; x.<caret>", Functions.getAllMethods(JactlType.LIST).stream().map(f -> f.first));
+    test("var x = [1,2,3]; x.<caret>", Functions.getAllMethods(JactlType.LIST).stream().map(f -> f.first));
     testIncludes("Map x; x.<caret>", "size", "map", "toString");
-    test("Map x; x.<caret>", Functions.getAllMethods(JactlType.MAP).stream().map(f -> f.name));
-    test("var x = [a:1]; x.<caret>", Functions.getAllMethods(JactlType.MAP).stream().map(f -> f.name));
+    test("Map x; x.<caret>", Functions.getAllMethods(JactlType.MAP).stream().map(f -> f.first));
+    test("var x = [a:1]; x.<caret>", Functions.getAllMethods(JactlType.MAP).stream().map(f -> f.first));
     test("def x; x.<caret>", "className", "toJson", "toString");
   }
 
@@ -672,5 +672,18 @@ public class CompletionTests extends BasePlatformTestCase {
     test("int x = 3\ndef f(int y) { <caret>def z = 2 }\nint zzz\n", Stream.of("x", "f", "y"), Functions.getGlobalFunctionNames().stream(), globalVars.stream(), Stream.of(JactlUtils.BUILTIN_TYPES), Stream.of(JactlUtils.BEGINNING_KEYWORDS));
     test("int x = 3\ndef f(int y) { <caret>def g(int z = 2) {} }\nint zzz\n", Stream.of("x", "f", "y" /*,"g"*/), Functions.getGlobalFunctionNames().stream(), globalVars.stream(), Stream.of(JactlUtils.BUILTIN_TYPES), Stream.of(JactlUtils.BEGINNING_KEYWORDS));
     test("int x = 3\nclass X { def f(int y) { <caret>def g(int z = 2) {} } }\nint zzz\n", Stream.of("f", "y", "X", "X.fromJson", "fromJson", "this" /*,"g"*/), Functions.getGlobalFunctionNames().stream(), globalVars.stream(), Stream.of(JactlUtils.BUILTIN_TYPES), Stream.of(JactlUtils.BEGINNING_KEYWORDS));
+  }
+
+  @Test public void testSwitchBindingVars() {
+    test("def x; switch (x) {\n  [a,b,c] -> <caret>", Stream.of("x","it","a","b","c"), Stream.of(JactlUtils.BUILTIN_TYPES), Stream.of(JactlUtils.BEGINNING_KEYWORDS), Functions.getGlobalFunctionNames().stream(), globalVars.stream());
+    test("def x; switch (x) {\n  [a,b,c] -> <caret>}", Stream.of("x","it","a","b","c"), Stream.of(JactlUtils.BUILTIN_TYPES), Stream.of(JactlUtils.BEGINNING_KEYWORDS), Functions.getGlobalFunctionNames().stream(), globalVars.stream());
+    test("def x; switch (x) {\n  [a,b,c] -> a + <caret>", Stream.of("x","it","a","b","c"), Functions.getGlobalFunctionNames().stream(), globalVars.stream());
+    test("def x; switch (x) {\n  [a,b,c] -> a + <caret>}", Stream.of("x","it","a","b","c"), Functions.getGlobalFunctionNames().stream(), globalVars.stream());
+    test("def x; switch (x) {\n  [a,b,c] -> b + <caret>", Stream.of("x","it","a","b","c"), Functions.getGlobalFunctionNames().stream(), globalVars.stream());
+    test("def x; switch (x) {\n  [a,b,c] -> b + <caret>}", Stream.of("x","it","a","b","c"), Functions.getGlobalFunctionNames().stream(), globalVars.stream());
+    test("def x; switch (x) {\n  [a,b,c] if <caret>", Stream.of("x","it","a","b","c"), Functions.getGlobalFunctionNames().stream(), globalVars.stream());
+    test("def x; switch (x) {\n  [a,b,c] if <caret> ->", Stream.of("x","it","a","b","c"), Functions.getGlobalFunctionNames().stream(), globalVars.stream());
+    test("def x; switch (x) {\n  [a,b,c] if <caret> -> }", Stream.of("x","it","a","b","c"), Functions.getGlobalFunctionNames().stream(), globalVars.stream());
+    test("def x; switch (x) {\n  [a,b,c] if <caret> -> 1\n }", Stream.of("x","it","a","b","c"), Functions.getGlobalFunctionNames().stream(), globalVars.stream());
   }
 }

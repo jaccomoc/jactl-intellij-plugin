@@ -245,17 +245,17 @@ public class JactlCompletionContributor extends CompletionContributor {
                    }
                    // Add any builtin methods based on type or on last assigned type if we have a variable
                    if (!type.is(JactlType.CLASS)) {
-                     List<FunctionDescriptor> builtinMethods = Functions.getAllMethods(type);
+                     List<Pair<String,FunctionDescriptor>> builtinMethods = Functions.getAllMethods(type);
                      result.addAllElements(builtinMethods.stream()
-                                                         .map(JactlCompletionContributor::createFunctionLookup)
+                                                         .map(p -> JactlCompletionContributor.createFunctionLookup(p.first, p.second))
                                                          .collect(Collectors.toList()));
                      // Add any additional methods based on last type assigned to variable
                      if (jactlExpr.left instanceof Expr.Identifier) {
                        Expr.Identifier identifier       = (Expr.Identifier) jactlExpr.left;
                        JactlType       lastAssignedType = identifier.varDecl != null ? identifier.varDecl.lastAssignedType : null;
                        if (lastAssignedType != null && !type.equals(lastAssignedType)){
-                         List<FunctionDescriptor> newMethods = Functions.getAllMethods(lastAssignedType).stream().filter(f -> builtinMethods.stream().noneMatch(b -> b.name.equals(f.name))).collect(Collectors.toList());
-                         result.addAllElements(newMethods.stream().map(JactlCompletionContributor::createFunctionLookup).collect(Collectors.toList()));
+                         List<Pair<String,FunctionDescriptor>> newMethods = Functions.getAllMethods(lastAssignedType).stream().filter(f -> builtinMethods.stream().noneMatch(b -> b.first.equals(f.first))).collect(Collectors.toList());
+                         result.addAllElements(newMethods.stream().map(p -> JactlCompletionContributor.createFunctionLookup(p.first, p.second)).collect(Collectors.toList()));
                        }
                      }
 
@@ -383,7 +383,8 @@ public class JactlCompletionContributor extends CompletionContributor {
     PsiElement firstChild = JactlUtils.getFirstChild(grandParent, JactlExprElementType.IDENTIFIER);
     if (JactlUtils.isElementType(grandParent, JactlStmtElementType.EXPR_STMT, JactlStmtElementType.VAR_DECL, JactlTypeElementType.CLASS_TYPE) &&
         firstChild == parent &&
-        JactlUtils.getNextSibling(parent, JactlTokenTypes.IDENTIFIER) == null) {
+        JactlUtils.getNextSibling(parent, JactlTokenTypes.IDENTIFIER) == null &&
+        !JactlUtils.isElementType(JactlUtils.getPrevSibling(parent), JactlTokenTypes.IF, JactlTokenTypes.UNLESS)) {
       addTypes.run();
       PsiElement classDecl        = JactlUtils.getAncestor(grandParent, JactlStmtElementType.CLASS_DECL);
       PsiElement greatGrandParent = grandParent.getParent();
@@ -396,7 +397,8 @@ public class JactlCompletionContributor extends CompletionContributor {
         return;
       }
       else if (JactlUtils.isElementType(grandParent, JactlStmtElementType.EXPR_STMT, JactlTypeElementType.CLASS_TYPE) &&
-               JactlUtils.getFirstChildNotWhiteSpace(grandParent) == parent) {
+               (JactlUtils.getFirstChildNotWhiteSpace(grandParent) == parent ||
+                JactlUtils.isElementType(JactlUtils.getPrevSibling(parent), JactlTokenTypes.ARROW))) {
         // If we are inside a statement block (not a class declaration) and we are at the start of the EXPR_STMT
         // then also add statement-beginning keywords since we are at the start of a statement.
         result.addAllElements(beginningKeywords);
@@ -535,10 +537,15 @@ public class JactlCompletionContributor extends CompletionContributor {
   }
 
   private static LookupElementBuilder createFunctionLookup(FunctionDescriptor f) {
-    return createFunctionLookupWithPrefix(null, f);
+    return createFunctionLookupWithPrefix(null, f.name, f);
   }
-  private static LookupElementBuilder createFunctionLookupWithPrefix(String prefix, FunctionDescriptor f) {
-    return LookupElementBuilder.create(prefix == null ? f.name : prefix + "." + f.name)
+
+  private static LookupElementBuilder createFunctionLookup(String name, FunctionDescriptor f) {
+    return createFunctionLookupWithPrefix(null, name, f);
+  }
+
+  private static LookupElementBuilder createFunctionLookupWithPrefix(String prefix, String name, FunctionDescriptor f) {
+    return LookupElementBuilder.create(prefix == null ? name : prefix + "." + name)
                                .appendTailText("(" +
                                                IntStream.range(0,f.paramNames.size())
                                                         .mapToObj(i -> f.paramNames.get(i) + " " + f.paramTypes.get(i).toString())
@@ -554,7 +561,7 @@ public class JactlCompletionContributor extends CompletionContributor {
   }
 
   private static LookupElementBuilder createStaticFunctionLookup(ClassDescriptor owningClass, FunctionDescriptor f) {
-    return createFunctionLookupWithPrefix(owningClass.getClassName(), f);
+    return createFunctionLookupWithPrefix(owningClass.getClassName(), f.name, f);
   }
 
   private static LookupElementBuilder createClassOrPackageLookup(String packageName, JactlUtils.PackageEntry entry) {

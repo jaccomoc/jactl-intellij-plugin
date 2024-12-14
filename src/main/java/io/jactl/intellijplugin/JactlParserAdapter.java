@@ -368,12 +368,14 @@ public class JactlParserAdapter implements PsiParser {
         for (Stmt.Block parent = block; parent != null; parent = parent.enclosingBlock) {
           // Work out whether we are in a debugger expression or in the actual code and switch to context
           // location if we step into different file from starting file
-          String source = parent.getLocation().getSource();
-          Token locationToUse = source.equals(file.getSourceCode()) ? location : contextLocation;
-          Stream.concat(parent.variables.values().stream().filter(v -> Utils.isEarlier(v.location, locationToUse)),
-                        parent.functions.stream().map(f -> f.declExpr.varDecl))
-                .filter(v -> !v.name.getStringValue().startsWith(Utils.JACTL_PREFIX))
-                .forEach(v -> addResult.accept(v.name.getStringValue(), v));
+          if (parent.getLocation() != null) {
+            String source        = parent.getLocation().getSource();
+            Token  locationToUse = source.equals(file.getSourceCode()) ? location : contextLocation;
+            Stream.concat(parent.variables.values().stream().filter(v -> Utils.isEarlier(v.location, locationToUse)),
+                          parent.functions.stream().map(f -> f.declExpr.varDecl))
+                  .filter(v -> !v.name.getStringValue().startsWith(Utils.JACTL_PREFIX))
+                  .forEach(v -> addResult.accept(v.name.getStringValue(), v));
+          }
         }
 
         // Get class that owns this block so that we can add fields/methods of the
