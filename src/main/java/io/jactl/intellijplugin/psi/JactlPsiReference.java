@@ -119,7 +119,7 @@ public class JactlPsiReference extends PsiReferenceBase<PsiElement> implements P
         Stmt.FunDecl funDecl = classDecl.methods.stream().filter(f -> f.declExpr.nameToken.getStringValue().equals(fieldName)).findFirst().orElse(null);
         if (funDecl == null) {
           // Look for built-in method
-          FunctionDescriptor builtin = Functions.lookupMethod(expr.parentType, fieldName);
+          FunctionDescriptor builtin = Functions.INSTANCE.lookupMethod(expr.parentType, fieldName);
           if (builtin != null) {
             return psiElement;    // Nowhere to point to so just return current field so at least we don't get an error during highlighting
           }

@@ -80,7 +80,12 @@ public class JactlTokenBuilder extends BuilderImpl {
     super(tokeniser);
   }
 
-  void pushEvent(Event evt)  { events.add(evt); }
+  void pushEvent(Event evt)  { 
+    events.add(evt);
+    if (events.size() > 100000) {
+      System.err.println("Too many events: " + events.size());
+    }
+  }
   Event popEvent()           { return events.remove(events.size() - 1); }
 
   public List<Event> getEvents() { return events; }

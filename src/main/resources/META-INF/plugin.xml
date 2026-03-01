@@ -48,12 +48,12 @@
     <refactoring.moveHandler       id="jactl.movedirectry" order="first,before kotlinAwareJavaMoveClassesOrPackagesHandler"  implementation="io.jactl.intellijplugin.extensions.JactlMoveDirectoryHandler" />
     <moveFileHandler                                implementation="io.jactl.intellijplugin.extensions.JactlMoveFileHandler" />
     <lang.refactoringSupport       language="Jactl" implementationClass="io.jactl.intellijplugin.extensions.JactlRefactoringSupportProvider"/>
-    <lang.formatter                language="Jactl" implementationClass="io.jactl.intellijplugin.extensions.JactlFormatingModelBuilder" />
+    <lang.formatter                language="Jactl" implementationClass="io.jactl.intellijplugin.extensions.JactlFormattingModelBuilder" />
     <lang.braceMatcher             language="Jactl" implementationClass="io.jactl.intellijplugin.extensions.JactlPairedBraceMatcher" />
     <lang.commenter                language="Jactl" implementationClass="io.jactl.intellijplugin.extensions.JactlCommenter" />
 
     <!-- runner/debugger -->
-    <compileServer.plugin              classpath="jps-plugin.jar;jactl-2.2.0-SNAPSHOT.jar"/>
+    <compileServer.plugin              classpath="jps-plugin.jar;jactl-2.4.0.jar"/>
     <compiler.buildTargetScopeProvider implementation="io.jactl.intellijplugin.extensions.compiler.JactlTargetScopeProvider" />
     <runConfigurationProducer          implementation="io.jactl.intellijplugin.extensions.runner.JactlRunConfigurationProducer" />
     <programRunner                     implementation="io.jactl.intellijplugin.extensions.runner.JactlProgramRunner"/>

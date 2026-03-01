@@ -1,6 +1,5 @@
 package io.jactl.intellijplugin;
 
-import com.github.weisj.jsvg.a;
 import com.intellij.openapi.actionSystem.IdeActions;
 import com.intellij.openapi.command.WriteCommandAction;
 import com.intellij.psi.codeStyle.CodeStyleManager;

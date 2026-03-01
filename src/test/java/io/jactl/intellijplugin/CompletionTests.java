@@ -522,43 +522,43 @@ public class CompletionTests extends BasePlatformTestCase {
   }
 
   @Test public void testIdentifierInExpr() {
-    test("class X{ static def func() {1} }; X x; <caret>", Stream.of("x", "X", "X.func", "X.fromJson", "class"), Stream.of(JactlUtils.BUILTIN_TYPES), Stream.of(JactlUtils.BEGINNING_KEYWORDS), Functions.getGlobalFunctionNames().stream(), globalVars.stream());
-    test("class X{ static def func() {1} }; 3 + <caret>", Stream.of("X.func", "X.fromJson"), Functions.getGlobalFunctionNames().stream(), globalVars.stream());
-    test("class X{ static def func() {1} }; <caret> + ", Stream.of("X.func", "X.fromJson"), Functions.getGlobalFunctionNames().stream(), globalVars.stream());
-    test("class X{ static def func() {1} }; <caret> + 3", Stream.of("X.func", "X.fromJson"), Functions.getGlobalFunctionNames().stream(), globalVars.stream());
-    test("class X{ static def func() {1} }; (<caret>", Stream.of("X", "X.func", "X.fromJson"), Functions.getGlobalFunctionNames().stream(), Stream.of(JactlUtils.BUILTIN_TYPES), globalVars.stream());
-    test("class X{ static def func() {1} }; (<caret> + ", Stream.of("X.func", "X.fromJson"), Functions.getGlobalFunctionNames().stream(), globalVars.stream());
-    test("class X{ static def func() {1} }; (<caret> + 3", Stream.of("X.func", "X.fromJson"), Functions.getGlobalFunctionNames().stream(), globalVars.stream());
-    test("class X{ static def func() {1} }; (<caret> + 3)", Stream.of("X.func", "X.fromJson"), Functions.getGlobalFunctionNames().stream(), globalVars.stream());
-    test("class X{ static def func() {1} }; X x; { int i; }; def f(){}; { def j; <caret>", Stream.of("x", "f", "j", "X", "X.func", "X.fromJson"), Stream.of(JactlUtils.BUILTIN_TYPES), Stream.of(JactlUtils.BEGINNING_KEYWORDS), Functions.getGlobalFunctionNames().stream(), globalVars.stream());
-    test("class X{ static def func() {1} }; X x; { int i; }; def f(){}; { def j; j + <caret>", Stream.of("x", "f", "j", "X.func", "X.fromJson"), Functions.getGlobalFunctionNames().stream(), globalVars.stream());
-    test("class X{ static def func() {1} }; X x; { int i; }; def f(){}; { def j; <caret> }", Stream.of("x", "f", "j", "X", "X.func", "X.fromJson"), Stream.of(JactlUtils.BUILTIN_TYPES), Stream.of(JactlUtils.BEGINNING_KEYWORDS), Functions.getGlobalFunctionNames().stream(), globalVars.stream());
-    test("class X{ static def func() {1} }; X x; { int i; }; def f(){}; { def j; j + <caret> }", Stream.of("x", "f", "j", "X.func", "X.fromJson"), Functions.getGlobalFunctionNames().stream(), globalVars.stream());
-    testInOrgTest("class X{}; <caret>", Stream.of("class", "X", "X.fromJson", "XYZ", "XYZ.func", "XYZ.fromJson", "AClass", "AClass.func", "AClass.fromJson"), Stream.of(JactlUtils.BUILTIN_TYPES), Stream.of(JactlUtils.BEGINNING_KEYWORDS), Functions.getGlobalFunctionNames().stream(), globalVars.stream());
-    testInOrgTest("class X{}; X x; x + <caret>", Stream.of("x", "X.fromJson", "XYZ.func", "XYZ.fromJson", "AClass.func", "AClass.fromJson"), Functions.getGlobalFunctionNames().stream(), globalVars.stream());
-
+    test("class X{ static def func() {1} }; X x; <caret>", Stream.of("x", "X", "X.func", "X.fromJson", "class"), Stream.of(JactlUtils.BUILTIN_TYPES), Stream.of(JactlUtils.BEGINNING_KEYWORDS), Functions.INSTANCE.getGlobalFunctionNames().stream(), globalVars.stream(), Stream.of(JactlUtils.BUILTIN_STATIC_METHODS));
+    test("class X{ static def func() {1} }; 3 + <caret>", Stream.of("X.func", "X.fromJson"), Functions.INSTANCE.getGlobalFunctionNames().stream(), globalVars.stream(), Stream.of(JactlUtils.BUILTIN_STATIC_METHODS));
+    test("class X{ static def func() {1} }; <caret> + ", Stream.of("X.func", "X.fromJson"), Functions.INSTANCE.getGlobalFunctionNames().stream(), globalVars.stream(), Stream.of(JactlUtils.BUILTIN_STATIC_METHODS));
+    test("class X{ static def func() {1} }; <caret> + 3", Stream.of("X.func", "X.fromJson"), Functions.INSTANCE.getGlobalFunctionNames().stream(), globalVars.stream(), Stream.of(JactlUtils.BUILTIN_STATIC_METHODS));
+    test("class X{ static def func() {1} }; (<caret>", Stream.of("X", "X.func", "X.fromJson"), Functions.INSTANCE.getGlobalFunctionNames().stream(), Stream.of(JactlUtils.BUILTIN_TYPES), globalVars.stream(), Stream.of(JactlUtils.BUILTIN_STATIC_METHODS));
+    test("class X{ static def func() {1} }; (<caret> + ", Stream.of("X.func", "X.fromJson"), Functions.INSTANCE.getGlobalFunctionNames().stream(), globalVars.stream(), Stream.of(JactlUtils.BUILTIN_STATIC_METHODS));
+    test("class X{ static def func() {1} }; (<caret> + 3", Stream.of("X.func", "X.fromJson"), Functions.INSTANCE.getGlobalFunctionNames().stream(), globalVars.stream(), Stream.of(JactlUtils.BUILTIN_STATIC_METHODS));
+    test("class X{ static def func() {1} }; (<caret> + 3)", Stream.of("X.func", "X.fromJson"), Functions.INSTANCE.getGlobalFunctionNames().stream(), globalVars.stream(), Stream.of(JactlUtils.BUILTIN_STATIC_METHODS));
+    test("class X{ static def func() {1} }; X x; { int i; }; def f(){}; { def j; <caret>", Stream.of("x", "f", "j", "X", "X.func", "X.fromJson"), Stream.of(JactlUtils.BUILTIN_TYPES), Stream.of(JactlUtils.BEGINNING_KEYWORDS), Functions.INSTANCE.getGlobalFunctionNames().stream(), globalVars.stream(), Stream.of(JactlUtils.BUILTIN_STATIC_METHODS));
+    test("class X{ static def func() {1} }; X x; { int i; }; def f(){}; { def j; j + <caret>", Stream.of("x", "f", "j", "X.func", "X.fromJson"), Functions.INSTANCE.getGlobalFunctionNames().stream(), globalVars.stream(), Stream.of(JactlUtils.BUILTIN_STATIC_METHODS));
+    test("class X{ static def func() {1} }; X x; { int i; }; def f(){}; { def j; <caret> }", Stream.of("x", "f", "j", "X", "X.func", "X.fromJson"), Stream.of(JactlUtils.BUILTIN_TYPES), Stream.of(JactlUtils.BEGINNING_KEYWORDS), Functions.INSTANCE.getGlobalFunctionNames().stream(), globalVars.stream(), Stream.of(JactlUtils.BUILTIN_STATIC_METHODS));
+    test("class X{ static def func() {1} }; X x; { int i; }; def f(){}; { def j; j + <caret> }", Stream.of("x", "f", "j", "X.func", "X.fromJson"), Functions.INSTANCE.getGlobalFunctionNames().stream(), globalVars.stream(), Stream.of(JactlUtils.BUILTIN_STATIC_METHODS));
+    testInOrgTest("class X{}; <caret>", Stream.of("class", "X", "X.fromJson", "XYZ", "XYZ.func", "XYZ.fromJson", "AClass", "AClass.func", "AClass.fromJson"), Stream.of(JactlUtils.BUILTIN_TYPES), Stream.of(JactlUtils.BEGINNING_KEYWORDS), Functions.INSTANCE.getGlobalFunctionNames().stream(), globalVars.stream(), Stream.of(JactlUtils.BUILTIN_STATIC_METHODS));
+    testInOrgTest("class X{}; X x; x + <caret>", Stream.of("x", "X.fromJson", "XYZ.func", "XYZ.fromJson", "AClass.func", "AClass.fromJson"), Functions.INSTANCE.getGlobalFunctionNames().stream(), globalVars.stream(), Stream.of(JactlUtils.BUILTIN_STATIC_METHODS));
+    
     test("class X{ static def func() {1}; X x; <caret>", Stream.of("static", "class", "const"), Stream.of(JactlUtils.BUILTIN_TYPES));
     test("class X{ static def func() {1}; X x; <caret> }", Stream.of("static", "class", "const"), Stream.of(JactlUtils.BUILTIN_TYPES));
-    test("class X{ static def func() {1}; X x; def f(int i) { <caret>", Stream.of("x", "i", "X", "func", "fromJson", "f", "this"), Stream.of(JactlUtils.BUILTIN_TYPES), Stream.of(JactlUtils.BEGINNING_KEYWORDS), Functions.getGlobalFunctionNames().stream(), globalVars.stream());
-    test("class X{ static def func() {1}; X x; def f(int i) { <caret> }", Stream.of("x", "i", "X", "func", "fromJson", "f", "this"), Stream.of(JactlUtils.BUILTIN_TYPES), Stream.of(JactlUtils.BEGINNING_KEYWORDS), Functions.getGlobalFunctionNames().stream(), globalVars.stream());
-    test("class X{ static def func() {1}; X x; def f(int i) { i + <caret>", Stream.of("x", "i", "func", "fromJson", "f", "this"), Functions.getGlobalFunctionNames().stream(), globalVars.stream());
-    testInOrgTest("class X extends AClass { X x; def f(int i) { <caret>", classesWithFromJson("B", "C", "XYZ"), Stream.of("x", "xxx", "VALUE", "i", "X", "AClass", "func", "fromJson", "f", "this", "super", "XYZ.func"), Stream.of(JactlUtils.BUILTIN_TYPES), Stream.of(JactlUtils.BEGINNING_KEYWORDS), Functions.getGlobalFunctionNames().stream(), globalVars.stream());
-    testInOrgTest("class X extends AClass { X x; def f(int i) { <caret> }", classesWithFromJson("B", "C", "XYZ"), Stream.of("x", "xxx", "VALUE", "i", "X", "AClass", "func", "fromJson", "f", "this", "super", "XYZ.func"), Stream.of(JactlUtils.BUILTIN_TYPES), Stream.of(JactlUtils.BEGINNING_KEYWORDS), Functions.getGlobalFunctionNames().stream(), globalVars.stream());
-    testInOrgTest("class X extends AClass { X x; def f(int i) { i + <caret>", Stream.of("B.fromJson", "C.fromJson", "x", "xxx", "VALUE", "i", "func", "fromJson", "f", "this", "super", "XYZ.func", "XYZ.fromJson"), Functions.getGlobalFunctionNames().stream(), globalVars.stream());
+    test("class X{ static def func() {1}; X x; def f(int i) { <caret>", Stream.of("x", "i", "X", "func", "fromJson", "f", "this"), Stream.of(JactlUtils.BUILTIN_TYPES), Stream.of(JactlUtils.BEGINNING_KEYWORDS), Functions.INSTANCE.getGlobalFunctionNames().stream(), globalVars.stream(), Stream.of(JactlUtils.BUILTIN_STATIC_METHODS));
+    test("class X{ static def func() {1}; X x; def f(int i) { <caret> }", Stream.of("x", "i", "X", "func", "fromJson", "f", "this"), Stream.of(JactlUtils.BUILTIN_TYPES), Stream.of(JactlUtils.BEGINNING_KEYWORDS), Functions.INSTANCE.getGlobalFunctionNames().stream(), globalVars.stream(), Stream.of(JactlUtils.BUILTIN_STATIC_METHODS));
+    test("class X{ static def func() {1}; X x; def f(int i) { i + <caret>", Stream.of("x", "i", "func", "fromJson", "f", "this"), Functions.INSTANCE.getGlobalFunctionNames().stream(), globalVars.stream(), Stream.of(JactlUtils.BUILTIN_STATIC_METHODS));
+    testInOrgTest("class X extends AClass { X x; def f(int i) { <caret>", classesWithFromJson("B", "C", "XYZ"), Stream.of("x", "xxx", "VALUE", "i", "X", "AClass", "func", "fromJson", "f", "this", "super", "XYZ.func"), Stream.of(JactlUtils.BUILTIN_TYPES), Stream.of(JactlUtils.BEGINNING_KEYWORDS), Functions.INSTANCE.getGlobalFunctionNames().stream(), globalVars.stream(), Stream.of(JactlUtils.BUILTIN_STATIC_METHODS));
+    testInOrgTest("class X extends AClass { X x; def f(int i) { <caret> }", classesWithFromJson("B", "C", "XYZ"), Stream.of("x", "xxx", "VALUE", "i", "X", "AClass", "func", "fromJson", "f", "this", "super", "XYZ.func"), Stream.of(JactlUtils.BUILTIN_TYPES), Stream.of(JactlUtils.BEGINNING_KEYWORDS), Functions.INSTANCE.getGlobalFunctionNames().stream(), globalVars.stream(), Stream.of(JactlUtils.BUILTIN_STATIC_METHODS));
+    testInOrgTest("class X extends AClass { X x; def f(int i) { i + <caret>", Stream.of("B.fromJson", "C.fromJson", "x", "xxx", "VALUE", "i", "func", "fromJson", "f", "this", "super", "XYZ.func", "XYZ.fromJson"), Functions.INSTANCE.getGlobalFunctionNames().stream(), globalVars.stream(), Stream.of(JactlUtils.BUILTIN_STATIC_METHODS));
 
-    test("//test\n<caret>", Stream.of("class", "package", "import"), Stream.of(JactlUtils.BUILTIN_TYPES), Stream.of(JactlUtils.BEGINNING_KEYWORDS), Functions.getGlobalFunctionNames().stream(), globalVars.stream());
-    test("<caret>", Stream.of("class", "package", "import"), Stream.of(JactlUtils.BUILTIN_TYPES), Stream.of(JactlUtils.BEGINNING_KEYWORDS), Functions.getGlobalFunctionNames().stream(), globalVars.stream());
-    test("package a.b\n<caret>", Stream.of("class", "import"), Stream.of(JactlUtils.BUILTIN_TYPES), Stream.of(JactlUtils.BEGINNING_KEYWORDS), Functions.getGlobalFunctionNames().stream(), globalVars.stream());
-    test("package a.b\nimport x.y.Z\n//test\n<caret>", Stream.of("class", "import"), Stream.of(JactlUtils.BUILTIN_TYPES), Stream.of(JactlUtils.BEGINNING_KEYWORDS), Functions.getGlobalFunctionNames().stream(), globalVars.stream());
-    test("class X{}; <caret>", Stream.of("class", "X", "X.fromJson"), Stream.of(JactlUtils.BUILTIN_TYPES), Stream.of(JactlUtils.BEGINNING_KEYWORDS), Functions.getGlobalFunctionNames().stream(), globalVars.stream());
-    test("class X{}; while (true) { <caret>", Stream.of("X", "X.fromJson"), Stream.of(JactlUtils.BUILTIN_TYPES), Stream.of(JactlUtils.BEGINNING_KEYWORDS), Functions.getGlobalFunctionNames().stream(), globalVars.stream());
-    test("class X{}; while (true) { def i = 1\n<caret>", Stream.of("i", "X", "X.fromJson"), Stream.of(JactlUtils.BUILTIN_TYPES), Stream.of(JactlUtils.BEGINNING_KEYWORDS), Functions.getGlobalFunctionNames().stream(), globalVars.stream());
-    test("class X{}; if (true) { <caret>", Stream.of("X", "X.fromJson"), Stream.of(JactlUtils.BUILTIN_TYPES), Stream.of(JactlUtils.BEGINNING_KEYWORDS), Functions.getGlobalFunctionNames().stream(), globalVars.stream());
-    test("class X{}; for (int i; i < 10; i++) { <caret>", Stream.of("i", "X", "X.fromJson"), Stream.of(JactlUtils.BUILTIN_TYPES), Stream.of(JactlUtils.BEGINNING_KEYWORDS), Functions.getGlobalFunctionNames().stream(), globalVars.stream());
+    test("//test\n<caret>", Stream.of("class", "package", "import"), Stream.of(JactlUtils.BUILTIN_TYPES), Stream.of(JactlUtils.BEGINNING_KEYWORDS), Functions.INSTANCE.getGlobalFunctionNames().stream(), globalVars.stream(), Stream.of(JactlUtils.BUILTIN_STATIC_METHODS));
+    test("<caret>", Stream.of("class", "package", "import"), Stream.of(JactlUtils.BUILTIN_TYPES), Stream.of(JactlUtils.BEGINNING_KEYWORDS), Functions.INSTANCE.getGlobalFunctionNames().stream(), globalVars.stream(), Stream.of(JactlUtils.BUILTIN_STATIC_METHODS));
+    test("package a.b\n<caret>", Stream.of("class", "import"), Stream.of(JactlUtils.BUILTIN_TYPES), Stream.of(JactlUtils.BEGINNING_KEYWORDS), Functions.INSTANCE.getGlobalFunctionNames().stream(), globalVars.stream(), Stream.of(JactlUtils.BUILTIN_STATIC_METHODS));
+    test("package a.b\nimport x.y.Z\n//test\n<caret>", Stream.of("class", "import"), Stream.of(JactlUtils.BUILTIN_TYPES), Stream.of(JactlUtils.BEGINNING_KEYWORDS), Functions.INSTANCE.getGlobalFunctionNames().stream(), globalVars.stream(), Stream.of(JactlUtils.BUILTIN_STATIC_METHODS));
+    test("class X{}; <caret>", Stream.of("class", "X", "X.fromJson"), Stream.of(JactlUtils.BUILTIN_TYPES), Stream.of(JactlUtils.BEGINNING_KEYWORDS), Functions.INSTANCE.getGlobalFunctionNames().stream(), globalVars.stream(), Stream.of(JactlUtils.BUILTIN_STATIC_METHODS));
+    test("class X{}; while (true) { <caret>", Stream.of("X", "X.fromJson"), Stream.of(JactlUtils.BUILTIN_TYPES), Stream.of(JactlUtils.BEGINNING_KEYWORDS), Functions.INSTANCE.getGlobalFunctionNames().stream(), globalVars.stream(), Stream.of(JactlUtils.BUILTIN_STATIC_METHODS));
+    test("class X{}; while (true) { def i = 1\n<caret>", Stream.of("i", "X", "X.fromJson"), Stream.of(JactlUtils.BUILTIN_TYPES), Stream.of(JactlUtils.BEGINNING_KEYWORDS), Functions.INSTANCE.getGlobalFunctionNames().stream(), globalVars.stream(), Stream.of(JactlUtils.BUILTIN_STATIC_METHODS));
+    test("class X{}; if (true) { <caret>", Stream.of("X", "X.fromJson"), Stream.of(JactlUtils.BUILTIN_TYPES), Stream.of(JactlUtils.BEGINNING_KEYWORDS), Functions.INSTANCE.getGlobalFunctionNames().stream(), globalVars.stream(), Stream.of(JactlUtils.BUILTIN_STATIC_METHODS));
+    test("class X{}; for (int i; i < 10; i++) { <caret>", Stream.of("i", "X", "X.fromJson"), Stream.of(JactlUtils.BUILTIN_TYPES), Stream.of(JactlUtils.BEGINNING_KEYWORDS), Functions.INSTANCE.getGlobalFunctionNames().stream(), globalVars.stream(), Stream.of(JactlUtils.BUILTIN_STATIC_METHODS));
 
     // Globals not supported in class files:
-    testWithFileName("org/X.jactl", "package org; class X{ static def func() {1}; X x; def f(int i) { <caret>", Stream.of("x", "i", "X", "func", "fromJson", "f", "this"), Stream.of(JactlUtils.BUILTIN_TYPES), Stream.of(JactlUtils.BEGINNING_KEYWORDS), Functions.getGlobalFunctionNames().stream());
-    testWithFileName("org/X.jactl", "package org; class X{ static def func() {1}; X x; def f(int i) { <caret> } }", Stream.of("x", "i", "X", "func", "fromJson", "f", "this"), Stream.of(JactlUtils.BUILTIN_TYPES), Stream.of(JactlUtils.BEGINNING_KEYWORDS), Functions.getGlobalFunctionNames().stream());
+    testWithFileName("org/X.jactl", "package org; class X{ static def func() {1}; X x; def f(int i) { <caret>", Stream.of("x", "i", "X", "func", "fromJson", "f", "this"), Stream.of(JactlUtils.BUILTIN_TYPES), Stream.of(JactlUtils.BEGINNING_KEYWORDS), Functions.INSTANCE.getGlobalFunctionNames().stream(), Stream.of(JactlUtils.BUILTIN_STATIC_METHODS));
+    testWithFileName("org/X.jactl", "package org; class X{ static def func() {1}; X x; def f(int i) { <caret> } }", Stream.of("x", "i", "X", "func", "fromJson", "f", "this"), Stream.of(JactlUtils.BUILTIN_TYPES), Stream.of(JactlUtils.BEGINNING_KEYWORDS), Functions.INSTANCE.getGlobalFunctionNames().stream(), Stream.of(JactlUtils.BUILTIN_STATIC_METHODS));
   }
 
   @Test public void testImport() {
@@ -585,7 +585,7 @@ public class CompletionTests extends BasePlatformTestCase {
     test("import static org.test.AClass.<caret> as JJJ", Stream.of("B", "C", "VALUE", "fromJson", "func"));
     test("import static org.test.AClass.B.<caret> as JJJ", Stream.of("XXX", "BBB", "fromJson"));
     test("import static org.test.AClass.B.XXX.<caret> as JJJ", Stream.of("xxxfunc", "fromJson"));
-    test("import org.test.AClass; <caret>", Stream.of("AClass", "AClass.fromJson", "AClass.func", "class", "import"), Stream.of(JactlUtils.BUILTIN_TYPES), Stream.of(JactlUtils.BEGINNING_KEYWORDS), Functions.getGlobalFunctionNames().stream(), globalVars.stream());
+    test("import org.test.AClass; <caret>", Stream.of("AClass", "AClass.fromJson", "AClass.func", "class", "import"), Stream.of(JactlUtils.BUILTIN_TYPES), Stream.of(JactlUtils.BEGINNING_KEYWORDS), Functions.INSTANCE.getGlobalFunctionNames().stream(), globalVars.stream(), Stream.of(JactlUtils.BUILTIN_STATIC_METHODS));
   }
 
   @Test public void testPackage() {
@@ -616,11 +616,11 @@ public class CompletionTests extends BasePlatformTestCase {
 
   @Test public void testBuiltinMethods() {
     testIncludes("List x; x.<caret>", "size", "map", "toString");
-    test("List x; x.<caret>", Functions.getAllMethods(JactlType.LIST).stream().map(f -> f.first));
-    test("var x = [1,2,3]; x.<caret>", Functions.getAllMethods(JactlType.LIST).stream().map(f -> f.first));
+    test("List x; x.<caret>", Functions.INSTANCE.getAllMethods(JactlType.LIST).stream().map(f -> f.first));
+    test("var x = [1,2,3]; x.<caret>", Functions.INSTANCE.getAllMethods(JactlType.LIST).stream().map(f -> f.first));
     testIncludes("Map x; x.<caret>", "size", "map", "toString");
-    test("Map x; x.<caret>", Functions.getAllMethods(JactlType.MAP).stream().map(f -> f.first));
-    test("var x = [a:1]; x.<caret>", Functions.getAllMethods(JactlType.MAP).stream().map(f -> f.first));
+    test("Map x; x.<caret>", Functions.INSTANCE.getAllMethods(JactlType.MAP).stream().map(f -> f.first));
+    test("var x = [a:1]; x.<caret>", Functions.INSTANCE.getAllMethods(JactlType.MAP).stream().map(f -> f.first));
     test("def x; x.<caret>", "className", "toJson", "toString");
   }
 
@@ -631,18 +631,18 @@ public class CompletionTests extends BasePlatformTestCase {
 
   @Test public void testCastAndAs() {
     test("class X{}; def x; x as <caret>", Stream.of("X"), Stream.of(JactlUtils.BUILTIN_TYPES));
-    test("class X{}; def x; (<caret>", classesWithFromJson("X"), Stream.of("x"), Stream.of(JactlUtils.BUILTIN_TYPES), Functions.getGlobalFunctionNames().stream(), globalVars.stream());
-    test("class X{}; def x; x = (<caret>", classesWithFromJson("X"), Stream.of("x"), Stream.of(JactlUtils.BUILTIN_TYPES), Functions.getGlobalFunctionNames().stream(), globalVars.stream());
-    test("class X{}; def x; x = 3 + (<caret>", classesWithFromJson("X"), Stream.of("x"), Stream.of(JactlUtils.BUILTIN_TYPES), Functions.getGlobalFunctionNames().stream(), globalVars.stream());
-    test("class X{}; def x; x = 3 * (2 + (<caret>", classesWithFromJson("X"), Stream.of("x"), Stream.of(JactlUtils.BUILTIN_TYPES), Functions.getGlobalFunctionNames().stream(), globalVars.stream());
+    test("class X{}; def x; (<caret>", classesWithFromJson("X"), Stream.of("x"), Stream.of(JactlUtils.BUILTIN_TYPES), Functions.INSTANCE.getGlobalFunctionNames().stream(), globalVars.stream(), Stream.of(JactlUtils.BUILTIN_STATIC_METHODS));
+    test("class X{}; def x; x = (<caret>", classesWithFromJson("X"), Stream.of("x"), Stream.of(JactlUtils.BUILTIN_TYPES), Functions.INSTANCE.getGlobalFunctionNames().stream(), globalVars.stream(), Stream.of(JactlUtils.BUILTIN_STATIC_METHODS));
+    test("class X{}; def x; x = 3 + (<caret>", classesWithFromJson("X"), Stream.of("x"), Stream.of(JactlUtils.BUILTIN_TYPES), Functions.INSTANCE.getGlobalFunctionNames().stream(), globalVars.stream(), Stream.of(JactlUtils.BUILTIN_STATIC_METHODS));
+    test("class X{}; def x; x = 3 * (2 + (<caret>", classesWithFromJson("X"), Stream.of("x"), Stream.of(JactlUtils.BUILTIN_TYPES), Functions.INSTANCE.getGlobalFunctionNames().stream(), globalVars.stream(), Stream.of(JactlUtils.BUILTIN_STATIC_METHODS));
     test("class X{}; def x; (<caret>)", Stream.of("X"), Stream.of(JactlUtils.BUILTIN_TYPES));
     test("class X{}; def x; (<caret>)x", Stream.of("X"), Stream.of(JactlUtils.BUILTIN_TYPES));
     test("class X{}; def x; if (true) { x++; x as <caret>", Stream.of("X"), Stream.of(JactlUtils.BUILTIN_TYPES));
-    test("class X{}; def x; if (true) { x++; (<caret>", classesWithFromJson("X"), Stream.of("x"), Stream.of(JactlUtils.BUILTIN_TYPES), Functions.getGlobalFunctionNames().stream(), globalVars.stream());
-    test("class X{}; def x; if (true) { x++; x = (<caret>", classesWithFromJson("X"), Stream.of("x"), Stream.of(JactlUtils.BUILTIN_TYPES), Functions.getGlobalFunctionNames().stream(), globalVars.stream());
-    test("class X{}; def x; if (true) { x++; x = 3 + (<caret>", classesWithFromJson("X"), Stream.of("x"), Stream.of(JactlUtils.BUILTIN_TYPES), Functions.getGlobalFunctionNames().stream(), globalVars.stream());
-    test("class X{}; def x; if (true) { x++; x = true ? 3 * (2 + (<caret>", classesWithFromJson("X"), Stream.of("x"), Stream.of(JactlUtils.BUILTIN_TYPES), Functions.getGlobalFunctionNames().stream(), globalVars.stream());
-    test("class X{}; def x; if (true) { x++; x = true ? 4 : 3 * (2 + (<caret>", classesWithFromJson("X"), Stream.of("x"), Stream.of(JactlUtils.BUILTIN_TYPES), Functions.getGlobalFunctionNames().stream(), globalVars.stream());
+    test("class X{}; def x; if (true) { x++; (<caret>", classesWithFromJson("X"), Stream.of("x"), Stream.of(JactlUtils.BUILTIN_TYPES), Functions.INSTANCE.getGlobalFunctionNames().stream(), globalVars.stream(), Stream.of(JactlUtils.BUILTIN_STATIC_METHODS));
+    test("class X{}; def x; if (true) { x++; x = (<caret>", classesWithFromJson("X"), Stream.of("x"), Stream.of(JactlUtils.BUILTIN_TYPES), Functions.INSTANCE.getGlobalFunctionNames().stream(), globalVars.stream(), Stream.of(JactlUtils.BUILTIN_STATIC_METHODS));
+    test("class X{}; def x; if (true) { x++; x = 3 + (<caret>", classesWithFromJson("X"), Stream.of("x"), Stream.of(JactlUtils.BUILTIN_TYPES), Functions.INSTANCE.getGlobalFunctionNames().stream(), globalVars.stream(), Stream.of(JactlUtils.BUILTIN_STATIC_METHODS));
+    test("class X{}; def x; if (true) { x++; x = true ? 3 * (2 + (<caret>", classesWithFromJson("X"), Stream.of("x"), Stream.of(JactlUtils.BUILTIN_TYPES), Functions.INSTANCE.getGlobalFunctionNames().stream(), globalVars.stream(), Stream.of(JactlUtils.BUILTIN_STATIC_METHODS));
+    test("class X{}; def x; if (true) { x++; x = true ? 4 : 3 * (2 + (<caret>", classesWithFromJson("X"), Stream.of("x"), Stream.of(JactlUtils.BUILTIN_TYPES), Functions.INSTANCE.getGlobalFunctionNames().stream(), globalVars.stream(), Stream.of(JactlUtils.BUILTIN_STATIC_METHODS));
     test("class X{}; def x; if (true) { x++; (<caret>)", Stream.of("X"), Stream.of(JactlUtils.BUILTIN_TYPES));
     test("class X{}; def x; if (true) { x++; (<caret>)x", Stream.of("X"), Stream.of(JactlUtils.BUILTIN_TYPES));
 
@@ -660,30 +660,30 @@ public class CompletionTests extends BasePlatformTestCase {
   }
 
   @Test public void testNestedBlocks() {
-    test("int xxx = 1\n<caret>long yyy = 2; double zzz = 3", Stream.of("xxx", "class"), Functions.getGlobalFunctionNames().stream(), globalVars.stream(), Stream.of(JactlUtils.BUILTIN_TYPES), Stream.of(JactlUtils.BEGINNING_KEYWORDS));
-    test("int xxx = 1\nlong yyy = 2; <caret>double zzz = 3", Stream.of("xxx", "yyy", "class"), Functions.getGlobalFunctionNames().stream(), globalVars.stream(), Stream.of(JactlUtils.BUILTIN_TYPES), Stream.of(JactlUtils.BEGINNING_KEYWORDS));
-    test("int x = 3\nint y = <caret>\nint zzz\n", Stream.of("x"), Functions.getGlobalFunctionNames().stream(), globalVars.stream());
-    test("int x = 3\n{ int y = <caret> }\nint zzz\n", Stream.of("x"), Functions.getGlobalFunctionNames().stream(), globalVars.stream());
-    test("int x = 3\ndef f(int y = <caret>) {}\nint zzz\n", Stream.of("x", "f"), Functions.getGlobalFunctionNames().stream(), globalVars.stream());
-    test("int x = 3\ndef f(int i = 2, int j = <caret>) {}\nint zzz\n", Stream.of("x", "f", "i"), Functions.getGlobalFunctionNames().stream(), globalVars.stream());
-    test("int x = 3\ndef f(int i = 2, int j = 3 + <caret>) {}\nint zzz\n", Stream.of("x", "f", "i"), Functions.getGlobalFunctionNames().stream(), globalVars.stream());
-    test("int x = 3\ndef f(int y = 2) { <caret> }\nint zzz\n", Stream.of("x", "f", "y"), Functions.getGlobalFunctionNames().stream(), globalVars.stream(), Stream.of(JactlUtils.BUILTIN_TYPES), Stream.of(JactlUtils.BEGINNING_KEYWORDS));
-    test("int x = 3\ndef f(int y) { def g(int z = <caret>) {} }\nint zzz\n", Stream.of("x", "f", "y", "g"), Functions.getGlobalFunctionNames().stream(), globalVars.stream());
-    test("int x = 3\ndef f(int y) { <caret>def z = 2 }\nint zzz\n", Stream.of("x", "f", "y"), Functions.getGlobalFunctionNames().stream(), globalVars.stream(), Stream.of(JactlUtils.BUILTIN_TYPES), Stream.of(JactlUtils.BEGINNING_KEYWORDS));
-    test("int x = 3\ndef f(int y) { <caret>def g(int z = 2) {} }\nint zzz\n", Stream.of("x", "f", "y" /*,"g"*/), Functions.getGlobalFunctionNames().stream(), globalVars.stream(), Stream.of(JactlUtils.BUILTIN_TYPES), Stream.of(JactlUtils.BEGINNING_KEYWORDS));
-    test("int x = 3\nclass X { def f(int y) { <caret>def g(int z = 2) {} } }\nint zzz\n", Stream.of("f", "y", "X", "X.fromJson", "fromJson", "this" /*,"g"*/), Functions.getGlobalFunctionNames().stream(), globalVars.stream(), Stream.of(JactlUtils.BUILTIN_TYPES), Stream.of(JactlUtils.BEGINNING_KEYWORDS));
+    test("int xxx = 1\n<caret>long yyy = 2; double zzz = 3", Stream.of("xxx", "class"), Functions.INSTANCE.getGlobalFunctionNames().stream(), globalVars.stream(), Stream.of(JactlUtils.BUILTIN_STATIC_METHODS), Stream.of(JactlUtils.BUILTIN_TYPES), Stream.of(JactlUtils.BEGINNING_KEYWORDS));
+    test("int xxx = 1\nlong yyy = 2; <caret>double zzz = 3", Stream.of("xxx", "yyy", "class"), Functions.INSTANCE.getGlobalFunctionNames().stream(), globalVars.stream(), Stream.of(JactlUtils.BUILTIN_STATIC_METHODS), Stream.of(JactlUtils.BUILTIN_TYPES), Stream.of(JactlUtils.BEGINNING_KEYWORDS));
+    test("int x = 3\nint y = <caret>\nint zzz\n", Stream.of("x"), Functions.INSTANCE.getGlobalFunctionNames().stream(), globalVars.stream(), Stream.of(JactlUtils.BUILTIN_STATIC_METHODS));
+    test("int x = 3\n{ int y = <caret> }\nint zzz\n", Stream.of("x"), Functions.INSTANCE.getGlobalFunctionNames().stream(), globalVars.stream(), Stream.of(JactlUtils.BUILTIN_STATIC_METHODS));
+    test("int x = 3\ndef f(int y = <caret>) {}\nint zzz\n", Stream.of("x", "f"), Functions.INSTANCE.getGlobalFunctionNames().stream(), globalVars.stream(), Stream.of(JactlUtils.BUILTIN_STATIC_METHODS));
+    test("int x = 3\ndef f(int i = 2, int j = <caret>) {}\nint zzz\n", Stream.of("x", "f", "i"), Functions.INSTANCE.getGlobalFunctionNames().stream(), globalVars.stream(), Stream.of(JactlUtils.BUILTIN_STATIC_METHODS));
+    test("int x = 3\ndef f(int i = 2, int j = 3 + <caret>) {}\nint zzz\n", Stream.of("x", "f", "i"), Functions.INSTANCE.getGlobalFunctionNames().stream(), globalVars.stream(), Stream.of(JactlUtils.BUILTIN_STATIC_METHODS));
+    test("int x = 3\ndef f(int y = 2) { <caret> }\nint zzz\n", Stream.of("x", "f", "y"), Functions.INSTANCE.getGlobalFunctionNames().stream(), globalVars.stream(), Stream.of(JactlUtils.BUILTIN_STATIC_METHODS), Stream.of(JactlUtils.BUILTIN_TYPES), Stream.of(JactlUtils.BEGINNING_KEYWORDS));
+    test("int x = 3\ndef f(int y) { def g(int z = <caret>) {} }\nint zzz\n", Stream.of("x", "f", "y", "g"), Functions.INSTANCE.getGlobalFunctionNames().stream(), globalVars.stream(), Stream.of(JactlUtils.BUILTIN_STATIC_METHODS));
+    test("int x = 3\ndef f(int y) { <caret>def z = 2 }\nint zzz\n", Stream.of("x", "f", "y"), Functions.INSTANCE.getGlobalFunctionNames().stream(), globalVars.stream(), Stream.of(JactlUtils.BUILTIN_STATIC_METHODS), Stream.of(JactlUtils.BUILTIN_TYPES), Stream.of(JactlUtils.BEGINNING_KEYWORDS));
+    test("int x = 3\ndef f(int y) { <caret>def g(int z = 2) {} }\nint zzz\n", Stream.of("x", "f", "y" /*,"g"*/), Functions.INSTANCE.getGlobalFunctionNames().stream(), globalVars.stream(), Stream.of(JactlUtils.BUILTIN_STATIC_METHODS), Stream.of(JactlUtils.BUILTIN_TYPES), Stream.of(JactlUtils.BEGINNING_KEYWORDS));
+    test("int x = 3\nclass X { def f(int y) { <caret>def g(int z = 2) {} } }\nint zzz\n", Stream.of("f", "y", "X", "X.fromJson", "fromJson", "this" /*,"g"*/), Functions.INSTANCE.getGlobalFunctionNames().stream(), globalVars.stream(), Stream.of(JactlUtils.BUILTIN_STATIC_METHODS), Stream.of(JactlUtils.BUILTIN_TYPES), Stream.of(JactlUtils.BEGINNING_KEYWORDS));
   }
 
   @Test public void testSwitchBindingVars() {
-    test("def x; switch (x) {\n  [a,b,c] -> <caret>", Stream.of("x","it","a","b","c"), Stream.of(JactlUtils.BUILTIN_TYPES), Stream.of(JactlUtils.BEGINNING_KEYWORDS), Functions.getGlobalFunctionNames().stream(), globalVars.stream());
-    test("def x; switch (x) {\n  [a,b,c] -> <caret>}", Stream.of("x","it","a","b","c"), Stream.of(JactlUtils.BUILTIN_TYPES), Stream.of(JactlUtils.BEGINNING_KEYWORDS), Functions.getGlobalFunctionNames().stream(), globalVars.stream());
-    test("def x; switch (x) {\n  [a,b,c] -> a + <caret>", Stream.of("x","it","a","b","c"), Functions.getGlobalFunctionNames().stream(), globalVars.stream());
-    test("def x; switch (x) {\n  [a,b,c] -> a + <caret>}", Stream.of("x","it","a","b","c"), Functions.getGlobalFunctionNames().stream(), globalVars.stream());
-    test("def x; switch (x) {\n  [a,b,c] -> b + <caret>", Stream.of("x","it","a","b","c"), Functions.getGlobalFunctionNames().stream(), globalVars.stream());
-    test("def x; switch (x) {\n  [a,b,c] -> b + <caret>}", Stream.of("x","it","a","b","c"), Functions.getGlobalFunctionNames().stream(), globalVars.stream());
-    test("def x; switch (x) {\n  [a,b,c] if <caret>", Stream.of("x","it","a","b","c"), Functions.getGlobalFunctionNames().stream(), globalVars.stream());
-    test("def x; switch (x) {\n  [a,b,c] if <caret> ->", Stream.of("x","it","a","b","c"), Functions.getGlobalFunctionNames().stream(), globalVars.stream());
-    test("def x; switch (x) {\n  [a,b,c] if <caret> -> }", Stream.of("x","it","a","b","c"), Functions.getGlobalFunctionNames().stream(), globalVars.stream());
-    test("def x; switch (x) {\n  [a,b,c] if <caret> -> 1\n }", Stream.of("x","it","a","b","c"), Functions.getGlobalFunctionNames().stream(), globalVars.stream());
+    test("def x; switch (x) {\n  [a,b,c] -> <caret>", Stream.of("x","it","a","b","c"), Stream.of(JactlUtils.BUILTIN_TYPES), Stream.of(JactlUtils.BEGINNING_KEYWORDS), Functions.INSTANCE.getGlobalFunctionNames().stream(), globalVars.stream());
+    test("def x; switch (x) {\n  [a,b,c] -> <caret>}", Stream.of("x","it","a","b","c"), Stream.of(JactlUtils.BUILTIN_TYPES), Stream.of(JactlUtils.BEGINNING_KEYWORDS), Functions.INSTANCE.getGlobalFunctionNames().stream(), globalVars.stream());
+    test("def x; switch (x) {\n  [a,b,c] -> a + <caret>", Stream.of("x","it","a","b","c"), Functions.INSTANCE.getGlobalFunctionNames().stream(), globalVars.stream(), Stream.of(JactlUtils.BUILTIN_STATIC_METHODS));
+    test("def x; switch (x) {\n  [a,b,c] -> a + <caret>}", Stream.of("x","it","a","b","c"), Functions.INSTANCE.getGlobalFunctionNames().stream(), globalVars.stream(), Stream.of(JactlUtils.BUILTIN_STATIC_METHODS));
+    test("def x; switch (x) {\n  [a,b,c] -> b + <caret>", Stream.of("x","it","a","b","c"), Functions.INSTANCE.getGlobalFunctionNames().stream(), globalVars.stream(), Stream.of(JactlUtils.BUILTIN_STATIC_METHODS));
+    test("def x; switch (x) {\n  [a,b,c] -> b + <caret>}", Stream.of("x","it","a","b","c"), Functions.INSTANCE.getGlobalFunctionNames().stream(), globalVars.stream(), Stream.of(JactlUtils.BUILTIN_STATIC_METHODS));
+    test("def x; switch (x) {\n  [a,b,c] if <caret>", Stream.of("x","it","a","b","c"), Functions.INSTANCE.getGlobalFunctionNames().stream(), globalVars.stream());
+    test("def x; switch (x) {\n  [a,b,c] if <caret> ->", Stream.of("x","it","a","b","c"), Functions.INSTANCE.getGlobalFunctionNames().stream(), globalVars.stream());
+    test("def x; switch (x) {\n  [a,b,c] if <caret> -> }", Stream.of("x","it","a","b","c"), Functions.INSTANCE.getGlobalFunctionNames().stream(), globalVars.stream());
+    test("def x; switch (x) {\n  [a,b,c] if <caret> -> 1\n }", Stream.of("x","it","a","b","c"), Functions.INSTANCE.getGlobalFunctionNames().stream(), globalVars.stream());
   }
 }

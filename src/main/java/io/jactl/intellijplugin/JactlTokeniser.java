@@ -61,7 +61,6 @@ public class JactlTokeniser extends Lexer {
   }
 
   public void tokenise(CharSequence charSequence, int startOffset, int endOffset) {
-    //System.out.println("DEBUG: JactlTokeniser.tokenise(this=" + System.identityHashCode(this) + ", startOffset=" + startOffset + ", endOffset=" + endOffset + "): text=<" + System.identityHashCode(charSequence) + ">");
     bufferSequence   = charSequence;
     this.startOffset = startOffset;
     this.endOffset   = endOffset;

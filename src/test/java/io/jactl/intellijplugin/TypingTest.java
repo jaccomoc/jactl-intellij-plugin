@@ -119,4 +119,21 @@ public class TypingTest extends BaseTypingTestCase {
     myFixture.configureByText("script.jactl", "");
     performTypingNoSpaces(text);
   }
+  
+  public void testFunDeclWithBackSpace() {
+    String text = "def minus(a<caret>,b) { return [] if [0] >= b[1] || [1] <= b[0]\n" +
+                  "                 [[[0],b[0]] if [0] < b[0], [b[1],[1]] if [1] > b[1]].filter() }\n" +
+                  "stream(nextLine).map{ [$1,$2 1] if /(\\d )-(\\d )/n }.filter()\n" +
+                  "                .reduce([]){ its,r -> its   its.reduce([r]) { rs,it -> rs.flatMap{ rr -> minus(rr,it) } } }\n" +
+                  "                .map{ it[1] - it[0] }\n" +
+                  "                .sum()";
+    myFixture.configureByText("script.jactl", text);
+    backspace(1);
+    verify("def minus(,b) { return [] if [0] >= b[1] || [1] <= b[0]\n" +
+           "                 [[[0],b[0]] if [0] < b[0], [b[1],[1]] if [1] > b[1]].filter() }\n" +
+           "stream(nextLine).map{ [$1,$2 1] if /(\\d )-(\\d )/n }.filter()\n" +
+           "                .reduce([]){ its,r -> its   its.reduce([r]) { rs,it -> rs.flatMap{ rr -> minus(rr,it) } } }\n" +
+           "                .map{ it[1] - it[0] }\n" +
+           "                .sum()");
+  }
 }

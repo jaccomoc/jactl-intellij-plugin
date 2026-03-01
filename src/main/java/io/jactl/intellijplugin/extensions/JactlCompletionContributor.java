@@ -64,11 +64,11 @@ public class JactlCompletionContributor extends CompletionContributor {
   List<LookupElementBuilder> globalFunctionNames;
 
   public JactlCompletionContributor() {
-    globalFunctionNames = Functions.getGlobalFunctionNames()
-                                   .stream()
-                                   .map(Functions::getGlobalFunDecl)
-                                   .map(JactlCompletionContributor::createFunctionLookup)
-                                   .collect(Collectors.toList());
+    globalFunctionNames = Functions.INSTANCE.getGlobalFunctionNames()
+                                            .stream()
+                                            .map(Functions.INSTANCE::getGlobalFunDecl)
+                                            .map(JactlCompletionContributor::createFunctionLookup)
+                                            .collect(Collectors.toList());
 
     // We have an identifier in an expression not immediately after a '.' or '?.'
     // Add all visible variables/fields, functions/methods, global functions, and any class static functions we can find.
@@ -224,7 +224,7 @@ public class JactlCompletionContributor extends CompletionContributor {
                      // Add methods if instance or static if class
                      result.addAllElements(classDescriptor.getAllMethods()
                                                           .filter(entry -> !entry.getKey().startsWith(Utils.JACTL_PREFIX))
-                                                          .filter(entry -> type.is(JactlType.INSTANCE) || entry.getValue().isStatic)
+                                                          .filter(entry -> type.is(JactlType.INSTANCE) || entry.getValue().isStaticMethod)
                                                           .map(Map.Entry::getValue)
                                                           .map(JactlCompletionContributor::createFunctionLookup)
                                                           .collect(Collectors.toList()));
@@ -245,7 +245,7 @@ public class JactlCompletionContributor extends CompletionContributor {
                    }
                    // Add any builtin methods based on type or on last assigned type if we have a variable
                    if (!type.is(JactlType.CLASS)) {
-                     List<Pair<String,FunctionDescriptor>> builtinMethods = Functions.getAllMethods(type);
+                     List<Pair<String,FunctionDescriptor>> builtinMethods = Functions.INSTANCE.getAllMethods(type);
                      result.addAllElements(builtinMethods.stream()
                                                          .map(p -> JactlCompletionContributor.createFunctionLookup(p.first, p.second))
                                                          .collect(Collectors.toList()));
@@ -254,7 +254,7 @@ public class JactlCompletionContributor extends CompletionContributor {
                        Expr.Identifier identifier       = (Expr.Identifier) jactlExpr.left;
                        JactlType       lastAssignedType = identifier.varDecl != null ? identifier.varDecl.lastAssignedType : null;
                        if (lastAssignedType != null && !type.equals(lastAssignedType)){
-                         List<Pair<String,FunctionDescriptor>> newMethods = Functions.getAllMethods(lastAssignedType).stream().filter(f -> builtinMethods.stream().noneMatch(b -> b.first.equals(f.first))).collect(Collectors.toList());
+                         List<Pair<String,FunctionDescriptor>> newMethods = Functions.INSTANCE.getAllMethods(lastAssignedType).stream().filter(f -> builtinMethods.stream().noneMatch(b -> b.first.equals(f.first))).collect(Collectors.toList());
                          result.addAllElements(newMethods.stream().map(p -> JactlCompletionContributor.createFunctionLookup(p.first, p.second)).collect(Collectors.toList()));
                        }
                      }
@@ -442,7 +442,7 @@ public class JactlCompletionContributor extends CompletionContributor {
     result.addAllElements(classDescriptors.stream()
                                           .filter(c -> baseClasses.stream().noneMatch(baseClass -> c.getPackagedName().equals(baseClass.getPackagedName())))
                                           .flatMap(descriptor -> descriptor.getAllMethods()
-                                                                           .filter(entry -> entry.getValue().isStatic)
+                                                                           .filter(entry -> entry.getValue().isStaticMethod)
                                                                            .map(entry -> createStaticFunctionLookup(descriptor, entry.getValue())))
                                           .collect(Collectors.toList()));
 
@@ -461,9 +461,12 @@ public class JactlCompletionContributor extends CompletionContributor {
       result.addAllElements(builtinTypeLookups);
     }
     JactlPsiElement ancestor   = (JactlPsiElement) JactlUtils.getAncestor(element, parentType);
+    
+    // Get all classes except the excluded one and any that don't have an INIT method (i.e. built-in types)
     result.addAllElements(JactlParserAdapter.getClasses(ancestor)
                                             .stream()
                                             .filter(descriptor -> !descriptor.getClassName().equals(excludeName))
+                                            .filter(descriptor -> descriptor.getMethod(Utils.JACTL_INIT) != null)
                                             .map(JactlCompletionContributor::createLookup)
                                             .collect(Collectors.toList()));
   }

@@ -158,15 +158,11 @@ public class JactlBuilder extends ModuleLevelBuilder {
     String baseJavaPkg     = JactlPlugin.BASE_JACTL_PKG;   // Should come from project configuration?
     String baseJavaPkgFile = JactlPlugin.BASE_JACTL_PKG_PATH;
     AtomicReference<JactlContext> jactlContextRef = new AtomicReference<>();
-    jactlContextRef.set(JactlContext.create()
-                                    .debug(Integer.getInteger("jactl.debug", 0))
-                                    .javaPackage(baseJavaPkg)
-                                    .evaluateConstExprs(false)
-                                    .idePlugin(true)
-                                    .packageChecker(pkgName -> sourceRoots.stream().anyMatch(root -> Files.isDirectory(Path.of(root, pkgName.replace('.', File.separatorChar)))))
-                                    .classLookup(name -> lookup(parsedClasses, jactlContextRef.get(), compileContext, name, baseJavaPkgFile, sourceRoots))
-                                    .classAdder((descriptor, bytes) -> addClass(parsedClasses, descriptor, bytes, sourceFile, outputConsumer, target, compileContext))
-                                    .build());
+    JactlContext.PackageChecker packageChecker = pkgName -> sourceRoots.stream().anyMatch(root -> Files.isDirectory(Path.of(root, pkgName.replace('.', File.separatorChar))));
+    JactlContext.ClassLookup classLookup = name -> lookup(parsedClasses, jactlContextRef.get(), compileContext, name, baseJavaPkgFile, sourceRoots);
+    JactlContext.ClassAdder classAdder = (descriptor, bytes) -> addClass(parsedClasses, descriptor, bytes, sourceFile, outputConsumer, target, compileContext);
+    JactlContext context = JactlHelper.createContext(baseJavaPkg, packageChecker, classLookup, classAdder);
+    jactlContextRef.set(context);
     return jactlContextRef.get();
   }
 

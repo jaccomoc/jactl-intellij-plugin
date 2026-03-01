@@ -41,7 +41,7 @@ import java.util.stream.Stream;
 import static io.jactl.intellijplugin.psi.JactlExprElementType.TERNARY_EXPR;
 import static io.jactl.intellijplugin.psi.JactlTokenTypes.*;
 
-public class JactlFormatingModelBuilder implements FormattingModelBuilder {
+public class JactlFormattingModelBuilder implements FormattingModelBuilder {
   @Override
   public @NotNull FormattingModel createModel(@NotNull FormattingContext formattingContext) {
     final CodeStyleSettings codeStyleSettings = formattingContext.getCodeStyleSettings();
@@ -78,6 +78,7 @@ public class JactlFormatingModelBuilder implements FormattingModelBuilder {
 
   private List<JactlAbstractBlock> _buildChildren(JactlAbstractBlock parentBlock, ASTNode parentNode, SpacingBuilder spacingBuilder, Alignment alignment) {
     List<JactlAbstractBlock> blocks    = new ArrayList<>();
+    Alignment listChildAlignment = null;
     for (ASTNode child  = parentNode.getFirstChildNode(); child != null; child = child.getTreeNext()) {
       // If we are a method call then subsume binary expr children into ours to make alignement
       // work better with auto-indent and aligning on '.' of method calls. This is due to how
@@ -87,9 +88,28 @@ public class JactlFormatingModelBuilder implements FormattingModelBuilder {
         blocks.addAll(_buildChildren(parentBlock, child, spacingBuilder, alignment));
         continue;
       }
-      JactlAbstractBlock block = createBlock(parentBlock, parentNode, spacingBuilder, child, alignment == null ? parentBlock.getAlignment(child) : alignment);
+      // If closing bracket follows a LIST in a statement, align it with the LIST's first element
+      Alignment childAlignment;
+      if (listChildAlignment != null && JactlUtils.isElementType(child, RIGHT_PAREN, RIGHT_SQUARE, RIGHT_BRACE)) {
+        childAlignment = listChildAlignment;
+        listChildAlignment = null;
+      }
+      else {
+        childAlignment = alignment == null ? parentBlock.getAlignment(child) : alignment;
+      }
+      JactlAbstractBlock block = createBlock(parentBlock, parentNode, spacingBuilder, child, childAlignment);
       if (block != null) {
         blocks.add(block);
+        // After a LIST in a statement context, capture alignment for the following closing bracket
+        if (isList(child) && parentNode.getElementType() instanceof JactlStmtElementType) {
+          block.getSubBlocks();
+          if (block.childBlocks != null && !block.childBlocks.isEmpty()) {
+            Alignment firstChildAlign = block.childBlocks.get(0).getAlignment();
+            if (firstChildAlign != null) {
+              listChildAlignment = firstChildAlign;
+            }
+          }
+        }
       }
     }
     return blocks;
@@ -97,6 +117,9 @@ public class JactlFormatingModelBuilder implements FormattingModelBuilder {
 
   private JactlAbstractBlock createBlock(JactlAbstractBlock parentBlock, ASTNode node, SpacingBuilder spacingBuilder, ASTNode child, Alignment alignment) {
     if (child.getElementType() == TokenType.WHITE_SPACE) {
+      return null;
+    }
+    if (child.getTextLength() == 0) {
       return null;
     }
     if (child.getFirstChildNode() == null) {
@@ -143,18 +166,12 @@ public class JactlFormatingModelBuilder implements FormattingModelBuilder {
     }
 
     @Override protected List<Block> buildChildren() {
-      childBlocks = JactlFormatingModelBuilder.this.buildChildren(this, getNode(), spacingBuilder);
+      childBlocks = JactlFormattingModelBuilder.this.buildChildren(this, getNode(), spacingBuilder);
       return new ArrayList<>(childBlocks);
     }
 
     public Alignment getOperatorAlignment() {
       return parentBlock == null ? null : parentBlock.getOperatorAlignment();
-    }
-
-    @Override
-    public boolean isIncomplete() {
-      boolean result = super.isIncomplete();
-      return result;
     }
 
     //
@@ -172,7 +189,8 @@ public class JactlFormatingModelBuilder implements FormattingModelBuilder {
       else if (newChildIndex == 0) {
         alignment = getAlignment();    // If parent is aligned then first child should be aligned
       }
-      return new ChildAttributes(isTopLevel && !(this instanceof JactlStmtBlock) ? Indent.getNoneIndent() : Indent.getNormalIndent(), alignment);
+      Indent indent = isTopLevel && !(this instanceof JactlStmtBlock) ? Indent.getNoneIndent() : Indent.getNormalIndent();
+      return new ChildAttributes(indent, alignment);
     }
 
     public Alignment getAlignment(ASTNode node) {

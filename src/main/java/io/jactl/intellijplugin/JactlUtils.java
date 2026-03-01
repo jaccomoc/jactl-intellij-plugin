@@ -59,8 +59,26 @@ public class JactlUtils {
   public static final String CODE_FRAGMENT_FILE_NAME = "_$j__fragment__.jactl";
   private static final Logger LOG = Logger.getInstance(JactlUtils.class);
 
-  public static final String[] BUILTIN_TYPES = Parser.typesAndVar.stream().map(tok -> tok.asString).toArray(String[]::new);
+  public static final String[] BUILTIN_TYPES = Stream.concat(Parser.typesAndVar.stream().map(tok -> tok.asString),
+                                                             Stream.of("Duration", "Instant", "LocalDate", "LocalDateTime", "LocalTime",
+                                                                       "Period", "Temporal", "TemporalAmount", "ZoneId", "ZonedDateTime"))
+                                                     .toArray(String[]::new);
   public static final String[] SIMPLE_TYPES  = Arrays.stream(Parser.simpleTypes).map(tok -> tok.asString).toArray(String[]::new);
+
+  public static final String[] BUILTIN_STATIC_METHODS = new String[] {
+    "Duration.between", "Duration.ofDays", "Duration.ofHours", "Duration.ofMillis", "Duration.ofMinutes",
+    "Duration.ofNanos", "Duration.ofSeconds", "Duration.ofSecondsAndNanos", "Duration.parse",
+    "Instant.now", "Instant.ofEpochMilli", "Instant.ofEpochSecond", "Instant.parse",
+    "LocalDate.now", "LocalDate.nowInZone", "LocalDate.of", "LocalDate.ofEpochDay", "LocalDate.ofYearDay",
+    "LocalDate.parse", "LocalDate.parseWithFormat", "LocalDateTime.now", "LocalDateTime.nowInZone",
+    "LocalDateTime.of", "LocalDateTime.ofDateAndTime", "LocalDateTime.ofEpochSecond", "LocalDateTime.ofInstant",
+    "LocalDateTime.parse", "LocalDateTime.parseWithFormat", "LocalTime.now", "LocalTime.nowInZone",
+    "LocalTime.of", "LocalTime.ofNanoOfDay", "LocalTime.ofSecondOfDay", "LocalTime.parse", "LocalTime.parseWithFormat",
+    "Period.between", "Period.of", "Period.ofDays", "Period.ofMonths", "Period.ofWeeks", "Period.ofYears", "Period.parse",
+    "ZoneId.getAvailableZoneIds", "ZoneId.isValid", "ZoneId.of", "ZoneId.systemDefault", "ZonedDateTime.now",
+    "ZonedDateTime.nowInZone", "ZonedDateTime.of", "ZonedDateTime.ofDateAndTime", "ZonedDateTime.ofDateTime",
+    "ZonedDateTime.ofInstant", "ZonedDateTime.parse", "ZonedDateTime.parseWithFormat"
+  };
 
   public static final String[] BEGINNING_KEYWORDS = new String[] { TokenType.IF.asString,
                                                                    TokenType.WHILE.asString,
@@ -785,16 +803,12 @@ public class JactlUtils {
     }
     String baseJavaPkg = JactlPlugin.BASE_JACTL_PKG;
     String baseJavaPkgFile = baseJavaPkg.replace('.', File.separatorChar);
-    return JactlContext.create()
-                       .javaPackage(baseJavaPkg)
-                       .evaluateConstExprs(false)
-                       .idePlugin(true)
-                       .packageChecker(pkgName -> {
-                         Set<String> pkgs = JactlUtils.pkgNames(project);
-                         return pkgs.contains(pkgName);
-                       })
-                       .classLookup(name -> lookup(name, baseJavaPkgFile, project))
-                       .build();
+    JactlContext.PackageChecker packageChecker = pkgName -> {
+      Set<String> pkgs = JactlUtils.pkgNames(project);
+      return pkgs.contains(pkgName);
+    };
+    JactlContext.ClassLookup classLookup = name -> lookup(name, baseJavaPkgFile, project);
+    return JactlHelper.createContext(baseJavaPkg, packageChecker, classLookup);
   }
 
   /**

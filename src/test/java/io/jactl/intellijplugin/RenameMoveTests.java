@@ -120,6 +120,17 @@ public class RenameMoveTests extends BasePlatformTestCase {
   public void testParameter() {
     singleFileTest("def fff(int x<caret>x, int yy) { fff(2); xx + yy + \"${xx}\".size(); xx; def g() { fff(xx); } }", "xx", "yyy");
   }
+  
+  public void testParameter2() {
+    singleFileTest("def minus(z<caret>,b) { return [z] if z[0] >= b[1] || z[1] <= b[0]\n" +
+                   "                 [[z[0],b[0]] if z[0] < b[0], [b[1],z[1]] if z[1] > b[1]].filter() }\n" +
+                   "stream(nextLine).map{ [$1,$2+1] if /(\\d+)-(\\d+)/n }.filter()\n" +
+                   "                .reduce([]){ its,r -> its + its.reduce([r]) { rs,it -> rs.flatMap{ rr -> minus(rr,it) } } }\n" +
+                   "                .map{ it[1] - it[0] }\n" +
+                   "                .sum()",
+                   "z",
+                   "yyy");
+  }
 
   public void testClass() {
     String scriptText = "package a.b; class CC<caret>C{ static fff() {} }";
