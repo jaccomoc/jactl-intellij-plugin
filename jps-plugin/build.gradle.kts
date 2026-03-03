@@ -24,6 +24,6 @@ dependencies {
         intellijIdeaCommunity("2024.1.4")
         bundledPlugin("com.intellij.java")
         instrumentationTools()
-        implementation("io.jactl:jactl:2.4.0")
+        implementation("io.jactl:jactl:2.4.1")
     }
 }

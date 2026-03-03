@@ -7,7 +7,7 @@ plugins {
     id("java")
 }
 
-version = "1.1.0"
+version = "1.1.1"
 
 java {
     withJavadocJar()
@@ -41,7 +41,7 @@ dependencies {
         testFramework(TestFrameworkType.Platform)
         pluginVerifier()
     }
-    implementation("io.jactl:jactl:2.4.0")
+    implementation("io.jactl:jactl:2.4.1")
     implementation(project(":jps-plugin"))
     testImplementation("junit:junit:4.13.1")
     testRuntimeOnly("junit:junit:4.13")
@@ -51,7 +51,7 @@ intellijPlatform {
     pluginConfiguration {
         id = "io.jactl.intellij-jactl-plugin"
         name="Jactl"
-        version="1.1.0"
+        version="1.1.1"
         ideaVersion {
             sinceBuild = "241"
             untilBuild = provider { null }
